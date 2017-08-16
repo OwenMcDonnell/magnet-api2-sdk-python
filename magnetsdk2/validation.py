@@ -16,6 +16,10 @@ def is_valid_uri(value):
     return isinstance(value, six.string_types) and rfc3987.match(value, 'URI')
 
 
+def is_valid_port(value):
+    return isinstance(value, six.integer_types) and 1 <= value <= 65535
+
+
 def is_valid_alert_sortBy(value):
     return isinstance(value, six.string_types) and value in ('logDate', 'batchDate')
 

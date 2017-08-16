@@ -5,6 +5,7 @@ import requests
 import iso8601
 import datetime
 from pytz import UTC
+from urllib import quote_plus
 from six.moves.urllib.parse import urlsplit
 from six.moves.configparser import RawConfigParser
 
@@ -76,18 +77,58 @@ class Connection(object):
 
         self._logger.debug('%s: endpoint=%r, verify=%r' % (self.__class__.__name__, self.endpoint, self.verify))
         self._session = None
+        self._proxies = None
 
     def __del__(self):
         self.close()
 
+    def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None):
+        """Configure this connection to use an HTTPS proxy to access the API endpoint. If necessary, closes the
+        existing session so that future requests reflect the new proxy settings.
+        :param proxy: string containing the proxy hostname or iP address
+        :param proxy_port: integer containing the proxy port to connect to (optional)
+        :param proxy_user: string containing the username to use for basic authentication to the proxy (optional)
+        :param proxy_pass: string containing the password to use for basic authentication to the proxy (optional)
+        :return: the proxy URL that will be proxied to the requests Session object
+        """
+        proxy_url = 'https://'
+        if proxy_user and proxy_pass:
+            if not isinstance(proxy_user, six.string_types):
+                raise ValueError("proxy username must be a string")
+            if not isinstance(proxy_pass, six.string_types):
+                raise ValueError("proxy password must be a string")
+            proxy_url += quote_plus(proxy_user) + ':' + quote_plus(proxy_pass) + '@'
+        elif proxy_user:
+            if not isinstance(proxy_user, six.string_types):
+                raise ValueError("proxy username must be a string")
+            proxy_url += quote_plus(proxy_user) + '@'
+        if not isinstance(proxy, six.string_types):
+            raise ValueError("proxy hostname or IP address must be a string")
+        proxy_url += proxy
+        if proxy_port:
+            if not is_valid_port(proxy_port):
+                raise ValueError("invalid proxy port")
+            proxy_url += ":%i" % proxy_port
+        if self._proxies and self._proxies['https'] != proxy_url:
+            self.close()
+            self._proxies = {
+                'http': proxy_url,
+                'https': proxy_url
+            }
+        return proxy_url
+
+    def clear_proxy(self):
+        """Removes the existing proxy configuration so that """
+        if self._proxies:
+            self.close()
+            self._proxies = None
+
     def close(self):
-        """ Closes the internal request.Session object and clears the credential cache.
+        """ Closes the internal request.Session object.
         """
         if self._session:
             self._session.close()
             self._session = None
-        if self._org_creds_cache:
-            self._org_creds_cache.clear()
 
     def _request(self, method, path, params=None, body=None):
         """ Performs an HTTP operation using the base API endpoint, API key and SSL validation / cert pinning obtained
@@ -102,6 +143,7 @@ class Connection(object):
             self._session.headers.update({_API_KEY_HEADER: self.api_key, "Accept-Encoding": "gzip, deflate",
                                           "User-Agent": "magnet-sdk-python", "Accept": "application/json"})
             self._session.verify = self.verify
+            self._session.proxies = self._proxies
 
         req = requests.Request(method=method, url=self.endpoint + path, params=params, json=body)
         req = self._session.prepare_request(req)
