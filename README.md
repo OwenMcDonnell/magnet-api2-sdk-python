@@ -10,10 +10,10 @@ It's as simple as creating a `Connection` object and using it to perform queries
 This small example shows you how to print out all of the organizations the configured
 API key has access to.
 ```python
-import magnetsdk2
 import json
+from magnetsdk2 import Connection
 
-conn = magnetsdk2.Connection()
+conn = Connection()
 for org in conn.organizations()
     print json.dumps(org, indent=4)
 ``` 
@@ -26,9 +26,9 @@ The simplest one is to pass one explicitly to its constructor:
 conn = magnetsdk2.Connection(api_key="my secret API key")
 ```
 
-If an explicit API key is not provided, the `Connection` call will look for one
-first in the `MAGNETSDK_API_KEY` environment variable and later in the `default`
-profile of the configuration file.
+If an explicit API key is not provided, the `Connection` constructor will look for 
+one first in the `MAGNETSDK_API_KEY` environment variable and failing that in the 
+`default` profile of the configuration file.
 
 You can add different API keys to a configuration file with different profiles by
 creating a file called `.magnetsdk/config` under the current user's home directory.
