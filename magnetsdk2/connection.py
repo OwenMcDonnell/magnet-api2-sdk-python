@@ -30,7 +30,6 @@ class Connection(object):
         :param profile: the profile name to use in ~/.magnetsdk/config
         :param api_key: if provided, this API key is used instead of the one on the configuration file
         :param endpoint: if provided this endpoint URL is used instead of the one on the configuration file
-        :return:
         """
         # initialize logger and credential cache
         self._logger = logging.getLogger('magnetsdk2')
@@ -169,7 +168,7 @@ class Connection(object):
         Typically used to upload log files. Will cache the response and return the same credentials if they
         have at least 10 minutes before expiration.
         :param organization_id: string with the UUID-style unique ID of the organization
-        :param: cache boolean controlling whether credentials are cached in this connection
+        :param cache: boolean controlling whether credentials are cached in this connection
         :return: decoded JSON objects that represents the credentials
         """
         if not is_valid_uuid(organization_id):
@@ -197,11 +196,12 @@ class Connection(object):
 
     def organization_alerts(self, organization_id, fromDate=None, toDate=None, sortBy="logDate", status=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
-        :param: organization_id: string with the UUID-style unique ID of the organization
-        :param: fromDate only list alerts with dates >= this parameter
-        :param: toDate only list alerts with dates <= this parameter
-        :param: sortBy one of 'logDate' or 'batchDate', controls which date field fromDate and toDate apply to
-        :param: status a list or set containing one or more of 'new', 'under_investigation', 'rejected', 'resolved'
+        :param organization_id: string with the UUID-style unique ID of the organization
+        :param fromDate: only list alerts with dates >= this parameter
+        :param toDate: only list alerts with dates <= this parameter
+        :param sortBy: one of 'logDate' or 'batchDate', controls which date field fromDate and toDate apply to
+        :param status: a list or set containing one or more of 'new', 'under_investigation', 'rejected', 'resolved'
+        :return: an iterator over the decoded JSON objects that represent alerts.
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")

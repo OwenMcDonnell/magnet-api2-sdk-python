@@ -14,7 +14,7 @@ import json
 from magnetsdk2 import Connection
 
 conn = Connection()
-for org in conn.organizations()
+for org in conn.organizations():
     print json.dumps(org, indent=4)
 ``` 
 
@@ -23,7 +23,9 @@ for org in conn.organizations()
 There are a couple of ways to let the `Connection` object know which API key to use.
 The simplest one is to pass one explicitly to its constructor:
 ```python
-conn = magnetsdk2.Connection(api_key="my secret API key")
+from magnetsdk2 import Connection
+
+conn = Connection(api_key="my secret API key")
 ```
 
 If an explicit API key is not provided, the `Connection` constructor will look for 
@@ -45,6 +47,7 @@ api_key=another secret api key
 So in this case you could create a connection to use either API key as follows:
 ```python
 from magnetsdk2 import Connection
-conn_default = Connection()   # uses default profile
-conn_profile2 = Connection(profile='profile2')
+
+conn_default = Connection()                     # uses default profile
+conn_profile2 = Connection(profile='profile2')  # use profile2 explicitly
 ```
