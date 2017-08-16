@@ -14,7 +14,7 @@ import json
 from magnetsdk2 import Connection
 
 conn = Connection()
-for org in conn.organizations():
+for org in conn.iter_organizations():
     print json.dumps(org, indent=4)
 ``` 
 

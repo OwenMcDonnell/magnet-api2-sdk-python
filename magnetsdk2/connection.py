@@ -127,7 +127,7 @@ class Connection(object):
                     six.reraise(*sys.exc_info())
             i += 1
 
-    def organizations(self):
+    def iter_organizations(self):
         """ Generator that allows iteration over all of the organizations that this connections's API key
         has access to.
         :return: an iterator over the decoded JSON objects that represent organizations.
@@ -150,7 +150,7 @@ class Connection(object):
                 response.raise_for_status()
             params['page'] += 1
 
-    def organization(self, organization_id):
+    def get_organization(self, organization_id):
         """ Retrieves detailed data from an organization this API key has accessed to based on its ID.
         :param organization_id: string with the UUID-style unique ID of the organization
         :return: decoded JSON objects that represents the organization or None if not found
@@ -163,7 +163,7 @@ class Connection(object):
         else:
             return None
 
-    def organization_credentials(self, organization_id, cache=True):
+    def get_organization_credentials(self, organization_id, cache=True):
         """ Retrieves a new set of temporary AWS credentials to allow access to an organization's S3 bucket.
         Typically used to upload log files. Will cache the response and return the same credentials if they
         have at least 10 minutes before expiration.
@@ -194,7 +194,7 @@ class Connection(object):
         else:
             response.raise_for_status()
 
-    def organization_alerts(self, organization_id, fromDate=None, toDate=None, sortBy="logDate", status=None):
+    def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None, sortBy="logDate", status=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param fromDate: only list alerts with dates >= this parameter
