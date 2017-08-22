@@ -247,7 +247,7 @@ class Connection(object):
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        if sortBy is not None and not is_valid_alert_sortBy(sortBy):
+        if not is_valid_alert_sortBy(sortBy):
             raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
         if status is not None and not is_valid_alert_status(status):
             raise ValueError(
@@ -256,14 +256,13 @@ class Connection(object):
         # loop over alert pages and yield them
         params = {
             'page': 1,
-            'size': _PAGE_SIZE
+            'size': _PAGE_SIZE,
+            'sortBy': sortBy
         }
         if fromDate:
             params['fromDate'] = parse_date(fromDate)
         if toDate:
             params['toDate'] = parse_date(toDate)
-        if sortBy:
-            params['sortBy'] = sortBy
         if status:
             params['status'] = status
 
@@ -280,3 +279,23 @@ class Connection(object):
             else:
                 response.raise_for_status()
             params['page'] += 1
+
+    def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
+        """ Lists all log or batch dates for which alerts exist on the organization.
+        :param organization_id: string with the UUID-style unique ID of the organization
+        :param sortBy: one of 'logDate' or 'batchDate', controls which date field to return
+        :return: a set of ISO 8601 dates for which alerts exist
+        """
+        if not is_valid_uuid(organization_id):
+            raise ValueError("organization id should be a string in UUID format")
+        if not is_valid_alert_sortBy(sortBy):
+            raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
+
+        response = self._request_retry("GET", path='organizations/%s/alerts/dates' % organization_id,
+                                       params={'sortBy': sortBy})
+        if response.status_code == 200:
+            return set(response.json())
+        elif response.status_code == 404:
+            return set()
+        else:
+            response.raise_for_status()
