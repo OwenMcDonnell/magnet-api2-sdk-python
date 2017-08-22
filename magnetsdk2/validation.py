@@ -41,4 +41,4 @@ def parse_date(value):
     elif isinstance(value, datetime.date):
         return value.isoformat()
     else:
-        raise ValueError('date must be in ISO format')
+        raise ValueError('date must be in ISO format: ' + repr(value))

@@ -4,20 +4,6 @@ A simple client that allows idiomatic access to the
 [Niddel Magnet v2 REST API](https://api.niddel.com/v2). Uses the wonderful
 [requests](http://docs.python-requests.org/) package to perform the requests.
 
-## Using the SDK
-
-It's as simple as creating a `Connection` object and using it to perform queries.
-This small example shows you how to print out all of the organizations the configured
-API key has access to.
-```python
-import json
-from magnetsdk2 import Connection
-
-conn = Connection()
-for org in conn.iter_organizations():
-    print json.dumps(org, indent=4)
-``` 
-
 ## Configuring Credentials
 
 There are a couple of ways to let the `Connection` object know which API key to use.
@@ -51,3 +37,43 @@ from magnetsdk2 import Connection
 conn_default = Connection()                     # uses default profile
 conn_profile2 = Connection(profile='profile2')  # use profile2 explicitly
 ```
+
+## Using the SDK
+
+It's as simple as creating a `Connection` object and using it to perform queries.
+This small example shows you how to print out all of the organizations the configured
+API key has access to.
+```python
+import json
+from magnetsdk2 import Connection
+
+conn = Connection()
+for org in conn.iter_organizations():
+    print(json.dumps(org, indent=4))
+``` 
+
+## Downloading Only New Alerts
+
+A common scenario for using the SDK is downloading only new alerts over time, typically
+to feed an integration with a 3rd party SIEM or ticketing system. In order to implement 
+this, the concept of a persistent iterator that saves its state on a JSON file is provided 
+in the SDK:
+
+```python
+from magnetsdk2 import Connection
+from magnetsdk2.iterator import FilePersistentAlertIterator
+
+conn = Connection()
+alert_iterator = FilePersistentAlertIterator('persistence.json', conn, 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
+for alert in alert_iterator:
+    print(alert)
+```
+
+If you run this same code multiple times, it will ever only output alerts it hasn't 
+processed before, provided file `persistence.json` is not tampered with and remains 
+available for reading and writing.
+
+Though the provided implementation saves the data to a JSON file, it is easy to add other
+means of persistence by creating subclasses of 
+`magnetsdk2.iterator.AbstractPersistentAlertIterator` that implement the abstract `save`
+and `load` methods.
