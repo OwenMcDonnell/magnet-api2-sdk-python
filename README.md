@@ -65,15 +65,14 @@ from magnetsdk2.iterator import FilePersistentAlertIterator
 
 conn = Connection()
 alert_iterator = FilePersistentAlertIterator('persistence.json', conn, 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
-for alert in alert_iterator:
+alert = alert_iterator.next()
+try:
+    # try to process alert in same way
     print(alert)
-    try:
-        # try to process alert in same way
-        print(alert)
-    except:
-        alert_iterator.load()   # on failure, reload iterator to ignore latest consumed alert
-    else:
-        alert_iterator.save()   # on success, persist the current iterator state
+except:
+    alert_iterator.load()   # on failure, reload iterator to ignore latest consumed alert
+else:
+    alert_iterator.save()   # on success, persist the current iterator state
 ```
 
 If you run this same code multiple times, it will ever only output alerts it hasn't 
