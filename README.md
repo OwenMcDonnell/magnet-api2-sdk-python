@@ -67,13 +67,24 @@ conn = Connection()
 alert_iterator = FilePersistentAlertIterator('persistence.json', conn, 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 for alert in alert_iterator:
     print(alert)
+    try:
+        # try to process alert in same way
+        print(alert)
+    except:
+        alert_iterator.load()   # on failure, reload iterator to ignore latest consumed alert
+    else:
+        alert_iterator.save()   # on success, persist the current iterator state
 ```
 
 If you run this same code multiple times, it will ever only output alerts it hasn't 
 processed before, provided file `persistence.json` is not tampered with and remains 
 available for reading and writing.
 
+You save the current state of the iterator with the `save` method. If you tried to
+processing alerts and failed, you can simply not save the iterator and reload the
+previous consistent state from disk using the `load` method.
+
 Though the provided implementation saves the data to a JSON file, it is easy to add other
 means of persistence by creating subclasses of 
-`magnetsdk2.iterator.AbstractPersistentAlertIterator` that implement the abstract `save`
-and `load` methods.
+`magnetsdk2.iterator.AbstractPersistentAlertIterator` that implement the abstract `_save`
+and `_load` methods.
