@@ -4,12 +4,12 @@ import os
 import requests
 import iso8601
 import datetime
-from pytz import UTC
 from urllib import quote_plus
 from six.moves.urllib.parse import urlsplit
 from six.moves.configparser import RawConfigParser
 
 from validation import *
+from utc import UTC
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')

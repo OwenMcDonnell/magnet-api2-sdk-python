@@ -43,7 +43,7 @@ setup(
     version=__version__,
     url='http://github.com/mlsecproject/magnet-api2-sdk-python/',
     license='Apache Software License',
-    install_requires=['requests==2.18.3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1', 'rfc3987>=1.3.7,<2', 'pytz'],
+    install_requires=['requests==2.18.3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1', 'rfc3987>=1.3.7,<2'],
     tests_require=['pytest'],
     test_suite='magnetsdk.test.test_magnetsdk',
     cmdclass={'test': PyTest},
