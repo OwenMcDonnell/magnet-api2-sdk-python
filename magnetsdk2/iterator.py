@@ -18,12 +18,6 @@ class PersistenceEntry(object):
         """A string in UUID format containing the ID of the organization."""
         return self._organization_id
 
-    @organization_id.setter
-    def organization_id(self, organization_id):
-        if not is_valid_uuid(organization_id):
-            raise ValueError('invalid organization ID')
-        self._organization_id = organization_id
-
     @property
     def latest_batch_date(self):
         """A string representing a date in ISO8601 format, which indicates the most recent batch date
@@ -60,7 +54,9 @@ class PersistenceEntry(object):
         self._latest_alert_ids.add(alert_id)
 
     def __init__(self, organization_id, latest_batch_date=None, latest_alert_ids=None):
-        self.organization_id = organization_id
+        if not is_valid_uuid(organization_id):
+            raise ValueError('invalid organization ID')
+        self._organization_id = organization_id
         self.latest_batch_date = latest_batch_date
         self.latest_alert_ids = latest_alert_ids
 

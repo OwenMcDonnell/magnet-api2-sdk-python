@@ -14,7 +14,7 @@ from utc import UTC
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
 _CONFIG_FILE = os.path.join(_CONFIG_DIR, "config")
-_DEFAULT_CONFIG = {'endpoint': 'https://api.niddel.com/api/v2'}
+_DEFAULT_CONFIG = {'endpoint': 'https://api.niddel.com/v2'}
 _API_KEY_HEADER = 'X-Api-Key'
 _PAGE_SIZE = 100
 
@@ -151,7 +151,9 @@ class Connection(object):
             self._logger.debug('{0:s} {1:s} ({2:d} bytes in body)'.format(req.method, req.url, len(req.body)))
         else:
             self._logger.debug('{0:s} {1:s}'.format(req.method, req.url))
-        return self._session.send(req)
+        response = self._session.send(req)
+        self._logger.debug("got {0:d} response".format(response.status_code))
+        return response
 
     def _request_retry(self, method, path, params=None, body=None, ok_status=(200, 404), retries=5):
         """ Wrapper around self._request that retries on exceptions and unexpected status codes.
@@ -202,8 +204,10 @@ class Connection(object):
         response = self._request_retry("GET", path='organizations/' + organization_id)
         if response.status_code == 200:
             return response.json()
-        else:
+        elif response.status_code == 404:
             return None
+        else:
+            response.raise_for_status()
 
     def get_organization_credentials(self, organization_id, cache=True):
         """ Retrieves a new set of temporary AWS credentials to allow access to an organization's S3 bucket.
