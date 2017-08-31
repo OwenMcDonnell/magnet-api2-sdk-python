@@ -303,3 +303,10 @@ class Connection(object):
             return set()
         else:
             response.raise_for_status()
+
+    def get_me(self):
+        response = self._request_retry("GET", path="me")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            response.raise_for_status()
