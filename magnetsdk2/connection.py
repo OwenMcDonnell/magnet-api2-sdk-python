@@ -92,29 +92,37 @@ class Connection(object):
         :return: the proxy URL that will be proxied to the requests Session object
         """
         proxy_url = 'https://'
+        proxy_url_sanitized = 'https://'
         if proxy_user and proxy_pass:
             if not isinstance(proxy_user, six.string_types):
                 raise ValueError("proxy username must be a string")
             if not isinstance(proxy_pass, six.string_types):
                 raise ValueError("proxy password must be a string")
             proxy_url += quote_plus(proxy_user) + ':' + quote_plus(proxy_pass) + '@'
+            proxy_url_sanitized += quote_plus(proxy_user) + ':' + ('*' * len(proxy_pass)) + '@'
         elif proxy_user:
             if not isinstance(proxy_user, six.string_types):
                 raise ValueError("proxy username must be a string")
             proxy_url += quote_plus(proxy_user) + '@'
+            proxy_url_sanitized += quote_plus(proxy_user) + '@'
         if not isinstance(proxy, six.string_types):
             raise ValueError("proxy hostname or IP address must be a string")
         proxy_url += proxy
+        proxy_url_sanitized += proxy
         if proxy_port:
+            if isinstance(proxy_port, six.string_types):
+                proxy_port = int(proxy_port)
             if not is_valid_port(proxy_port):
                 raise ValueError("invalid proxy port")
             proxy_url += ":%i" % proxy_port
-        if self._proxies and self._proxies['https'] != proxy_url:
-            self.close()
-            self._proxies = {
-                'http': proxy_url,
-                'https': proxy_url
-            }
+            proxy_url_sanitized += ":%i" % proxy_port
+        self._proxies = {
+            'http': proxy_url,
+            'https': proxy_url
+        }
+        if self._session:
+            self._session.proxies = self._proxies
+        self._logger.debug('using proxy URL ' + proxy_url_sanitized)
         return proxy_url
 
     def clear_proxy(self):
@@ -140,18 +148,23 @@ class Connection(object):
         """
         if self._session is None:
             self._session = requests.Session()
-            self._session.headers.update({_API_KEY_HEADER: self.api_key, "Accept-Encoding": "gzip, deflate",
-                                          "User-Agent": "magnet-sdk-python", "Accept": "application/json"})
+            self._session.headers.update({
+                _API_KEY_HEADER: self.api_key,
+                "Accept-Encoding": "gzip, deflate",
+                "User-Agent": "magnet-sdk-python",
+                "Accept": "application/json"
+            })
             self._session.verify = self.verify
             self._session.proxies = self._proxies
 
-        req = requests.Request(method=method, url=self.endpoint + path, params=params, json=body)
-        req = self._session.prepare_request(req)
-        if req.body:
-            self._logger.debug('{0:s} {1:s} ({2:d} bytes in body)'.format(req.method, req.url, len(req.body)))
+        response = self._session.request(method=method, url=self.endpoint + path, params=params, json=body,
+                                         timeout=(5,60))
+        if response.request.body:
+            self._logger.debug('{0:s} {1:s} ({2:d} bytes in body)'.format(response.request.method, \
+                                                                          response.request.url, \
+                                                                          len(response.request.body)))
         else:
-            self._logger.debug('{0:s} {1:s}'.format(req.method, req.url))
-        response = self._session.send(req)
+            self._logger.debug('{0:s} {1:s}'.format(response.request.method, response.request.url))
         self._logger.debug("got {0:d} response".format(response.status_code))
         return response
 
@@ -305,7 +318,7 @@ class Connection(object):
             response.raise_for_status()
 
     def get_me(self):
-        response = self._request_retry("GET", path="me")
+        response = self._request_retry("GET", path="me", ok_status=(200,))
         if response.status_code == 200:
             return response.json()
         else:
