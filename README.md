@@ -68,7 +68,7 @@ conn = Connection()
 alert_iterator = FilePersistentAlertIterator('persistence.json', conn, 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
 for alert in alert_iterator:
     try:
-        # try to process alert in same way
+        # try to process alert in some way
         print(alert)
     except:
         alert_iterator.load()   # on failure, reload iterator so last alert doesn't count as processed
@@ -81,7 +81,7 @@ processed before, provided file `persistence.json` is not tampered with and rema
 available for reading and writing.
 
 You save the current state of the iterator with the `save` method. If you tried to
-processing alerts and failed, you can simply not save the iterator and reload the
+process an alert and failed, you can simply not save the iterator and reload the
 previous consistent state from disk using the `load` method.
 
 Though the provided implementation saves the data to a JSON file, it is easy to add other
