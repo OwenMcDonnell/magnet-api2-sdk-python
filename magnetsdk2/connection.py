@@ -1,7 +1,7 @@
 import logging
 import sys
 import os
-import requests
+from requests import request
 import iso8601
 import datetime
 from urllib import quote_plus
@@ -18,16 +18,14 @@ _DEFAULT_CONFIG = {'endpoint': 'https://api.niddel.com/v2'}
 _API_KEY_HEADER = 'X-Api-Key'
 _PAGE_SIZE = 100
 
-
 class Connection(object):
     """ This class encapsulates accessing the Niddel Magnet v2 API (https://api.niddel.com/v2) using a particular
-    configuration profile from ~/.magnetsdk/config, and is wrapper around a requests.Session instance that is used
+    configuration profile from ~/.magnetsdk/config, and is wrapper around the requests library that is used
     for all accesses.
     """
 
     def __init__(self, profile='default', api_key=None, endpoint=None):
-        """ Initializes the connection with the proper configuration data. The underlying requests.Session object
-        is created lazily when the first actual operation is executed.
+        """ Initializes the connection with the proper configuration data.
         :param profile: the profile name to use in ~/.magnetsdk/config
         :param api_key: if provided, this API key is used instead of the one on the configuration file
         :param endpoint: if provided this endpoint URL is used instead of the one on the configuration file
@@ -76,20 +74,19 @@ class Connection(object):
             self.verify = True
 
         self._logger.debug('%s: endpoint=%r, verify=%r' % (self.__class__.__name__, self.endpoint, self.verify))
-        self._session = None
+        #self._session = None
         self._proxies = None
 
     def __del__(self):
         self.close()
 
     def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None):
-        """Configure this connection to use an HTTPS proxy to access the API endpoint. If necessary, closes the
-        existing session so that future requests reflect the new proxy settings.
+        """Configure this connection to use an HTTPS proxy to access the API endpoint.
         :param proxy: string containing the proxy hostname or iP address
         :param proxy_port: integer containing the proxy port to connect to (optional)
         :param proxy_user: string containing the username to use for basic authentication to the proxy (optional)
         :param proxy_pass: string containing the password to use for basic authentication to the proxy (optional)
-        :return: the proxy URL that will be proxied to the requests Session object
+        :return: the proxy URL
         """
         proxy_url = 'https://'
         proxy_url_sanitized = 'https://'
@@ -120,8 +117,8 @@ class Connection(object):
             'http': proxy_url,
             'https': proxy_url
         }
-        if self._session:
-            self._session.proxies = self._proxies
+        # if self._session:
+        #     self._session.proxies = self._proxies
         self._logger.debug('using proxy URL ' + proxy_url_sanitized)
         return proxy_url
 
@@ -132,33 +129,45 @@ class Connection(object):
             self._proxies = None
 
     def close(self):
-        """ Closes the internal request.Session object.
+        """ Closes the Connection object.
         """
-        if self._session:
-            self._session.close()
-            self._session = None
+        pass
+        # if self._session:
+        #     self._session.close()
+        #     self._session = None
 
     def _request(self, method, path, params=None, body=None):
         """ Performs an HTTP operation using the base API endpoint, API key and SSL validation / cert pinning obtained
-        from the configuration file. Creates a new session object if necessary.
+        from the configuration file.
         :param method: string with the the HTTP method to use ('GET', 'PUT', etc.)
         :param path: string with the path to append to the base API endpoint
         :param params: dict with the query parameters to submit
         :return: the requests.Response object
         """
-        if self._session is None:
-            self._session = requests.Session()
-            self._session.headers.update({
-                _API_KEY_HEADER: self.api_key,
-                "Accept-Encoding": "gzip, deflate",
-                "User-Agent": "magnet-sdk-python",
-                "Accept": "application/json"
-            })
-            self._session.verify = self.verify
-            self._session.proxies = self._proxies
-
-        response = self._session.request(method=method, url=self.endpoint + path, params=params, json=body,
-                                         timeout=(5,60))
+        # if self._session is None:
+        #    self._session = requests.Session()
+        #    self._session.verify = self.verify
+        #    self._session.proxies = self._proxies
+        #    self._session.auth = AuthHandler({self.endpoint: ApiAuth(self.api_key)})
+        #    self._session.headers.update({
+        #        _API_KEY_HEADER: self.api_key,
+        #        "Accept-Encoding": "gzip, deflate",
+        #        "User-Agent": "magnet-sdk-python",
+        #        "Accept": "application/json"
+        #    })
+        # self._logger.info(repr(self._session.headers))
+        # response = self._session.request(method=method, url=self.endpoint + path, params=params, json=body,
+        #                                  timeout=(5,60), auth = AuthHandler({self.endpoint: ApiAuth(self.api_key)}),
+        #                                  headers={_API_KEY_HEADER: self.api_key,
+        #                                           "Accept-Encoding": "gzip, deflate",
+        #                                           "User-Agent": "magnet-sdk-python",
+        #                                           "Accept": "application/json"})
+        response = request(method=method, url=self.endpoint + path, params=params, json=body, verify=self.verify,
+                           proxies=self._proxies, timeout=(5,60),
+                           headers={_API_KEY_HEADER: self.api_key,
+                                    "Accept-Encoding": "gzip, deflate",
+                                    "User-Agent": "magnet-sdk-python",
+                                    "Accept": "application/json"})
         if response.request.body:
             self._logger.debug('{0:s} {1:s} ({2:d} bytes in body)'.format(response.request.method, \
                                                                           response.request.url, \
