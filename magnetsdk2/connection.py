@@ -18,6 +18,7 @@ _DEFAULT_CONFIG = {'endpoint': 'https://api.niddel.com/v2'}
 _API_KEY_HEADER = 'X-Api-Key'
 _PAGE_SIZE = 100
 
+
 class Connection(object):
     """ This class encapsulates accessing the Niddel Magnet v2 API (https://api.niddel.com/v2) using a particular
     configuration profile from ~/.magnetsdk/config, and is wrapper around the requests library that is used
@@ -74,7 +75,7 @@ class Connection(object):
             self.verify = True
 
         self._logger.debug('%s: endpoint=%r, verify=%r' % (self.__class__.__name__, self.endpoint, self.verify))
-        #self._session = None
+        # self._session = None
         self._proxies = None
 
     def __del__(self):
@@ -113,14 +114,17 @@ class Connection(object):
                 raise ValueError("invalid proxy port")
             proxy_url += ":%i" % proxy_port
             proxy_url_sanitized += ":%i" % proxy_port
+        self.set_proxy_url(proxy_url)
+        self._logger.debug('using proxy URL ' + proxy_url_sanitized)
+        return proxy_url
+
+    def set_proxy_url(self, proxy_url):
         self._proxies = {
             'http': proxy_url,
             'https': proxy_url
         }
         # if self._session:
         #     self._session.proxies = self._proxies
-        self._logger.debug('using proxy URL ' + proxy_url_sanitized)
-        return proxy_url
 
     def clear_proxy(self):
         """Removes the existing proxy configuration so that """
@@ -163,7 +167,7 @@ class Connection(object):
         #                                           "User-Agent": "magnet-sdk-python",
         #                                           "Accept": "application/json"})
         response = request(method=method, url=self.endpoint + path, params=params, json=body, verify=self.verify,
-                           proxies=self._proxies, timeout=(5,60),
+                           proxies=self._proxies, timeout=(5, 60),
                            headers={_API_KEY_HEADER: self.api_key,
                                     "Accept-Encoding": "gzip, deflate",
                                     "User-Agent": "magnet-sdk-python",

@@ -194,6 +194,7 @@ class AbstractPersistentAlertIterator(Iterator):
                % (self.__class__.__name__, self.organization_id, self.start_date, self.persistence_entry)
 
 
+@python_2_unicode_compatible
 class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
     """Subclass of AbstractPersistentAlertIterator that saves the persistence state as a JSON object
     on a given text file. Does not lock the file or otherwise prevent multiple processes corrupting
