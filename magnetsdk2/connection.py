@@ -81,16 +81,19 @@ class Connection(object):
     def __del__(self):
         self.close()
 
-    def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None):
+    def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None, proxy_proto='https'):
         """Configure this connection to use an HTTPS proxy to access the API endpoint.
         :param proxy: string containing the proxy hostname or iP address
         :param proxy_port: integer containing the proxy port to connect to (optional)
         :param proxy_user: string containing the username to use for basic authentication to the proxy (optional)
         :param proxy_pass: string containing the password to use for basic authentication to the proxy (optional)
+        :param proxy_proto: string containing the proxy protocol equal to either 'http' or 'https'
         :return: the proxy URL
         """
-        proxy_url = 'https://'
-        proxy_url_sanitized = 'https://'
+        if not isinstance(proxy_proto, six.string_types) or not proxy_proto in ('http', 'https'):
+            raise ValueError("proxy protocol must be a string")
+        proxy_url = proxy_proto + '://'
+        proxy_url_sanitized = proxy_proto + '://'
         if proxy_user and proxy_pass:
             if not isinstance(proxy_user, six.string_types):
                 raise ValueError("proxy username must be a string")
