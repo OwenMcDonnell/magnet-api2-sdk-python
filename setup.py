@@ -21,21 +21,21 @@ def read(*parts):
 long_description = read('README.md')
 
 
-class PyTest(testcommand):
-    # noinspection PyAttributeOutsideInit
-    def finalize_options(self):
-        testcommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        import pytest
-        errcode = pytest.main(self.test_args)
-        sys.exit(errcode)
+# class PyTest(testcommand):
+#     # noinspection PyAttributeOutsideInit
+#     def finalize_options(self):
+#         testcommand.finalize_options(self)
+#         self.test_args = []
+#         self.test_suite = True
+#
+#     def run_tests(self):
+#         import pytest
+#         errcode = pytest.main(self.test_args)
+#         sys.exit(errcode)
 
 
 setup(
-    name='magnetsdk',
+    name='magnetsdk2',
     description='Python SDK to the Niddel Magnet API v2',
     long_description=long_description,
     author='Niddel Corp.',
@@ -44,10 +44,10 @@ setup(
     url='http://github.com/mlsecproject/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1', 'rfc3987>=1.3.7,<2'],
-    tests_require=['pytest'],
-    test_suite='magnetsdk.test.test_magnetsdk',
-    cmdclass={'test': PyTest},
-    packages=['magnetsdk'],
+    #tests_require=['pytest'],
+    #test_suite='magnetsdk2.test.test_magnetsdk',
+    #cmdclass={'test': PyTest},
+    packages=['magnetsdk2'],
     include_package_data=True,
     platforms='any',
     zip_safe=False,
