@@ -6,7 +6,8 @@ import iso8601
 import rfc3987
 import six
 
-_UUID_REGEX = re.compile("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+_UUID_REGEX = re.compile(
+    "(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
 def is_valid_uuid(value):

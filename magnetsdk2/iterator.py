@@ -10,8 +10,8 @@ from os.path import isfile
 
 from six import python_2_unicode_compatible
 
-from connection import Connection
-from validation import is_valid_uuid, parse_date
+from magnetsdk2.connection import Connection
+from magnetsdk2.validation import is_valid_uuid, parse_date
 
 
 @python_2_unicode_compatible
