@@ -1,11 +1,17 @@
-from collections import Iterable, Iterator
-from abc import ABCMeta, abstractmethod
+# -*- coding: utf-8 -*-
+"""
+This module allows persistent iteration of alerts. Some use cases include opening tickets based
+on new alerts, or even automating responses for some high-confidence alerts.
+"""
 import json
+from abc import ABCMeta, abstractmethod
+from collections import Iterable, Iterator
 from os.path import isfile
+
 from six import python_2_unicode_compatible
 
-from validation import is_valid_uuid, parse_date
 from connection import Connection
+from validation import is_valid_uuid, parse_date
 
 
 @python_2_unicode_compatible
@@ -20,8 +26,8 @@ class PersistenceEntry(object):
 
     @property
     def latest_batch_date(self):
-        """A string representing a date in ISO8601 format, which indicates the most recent batch date
-        that has already been processed."""
+        """A string representing a date in ISO8601 format, which indicates the most recent batch
+        date that has already been processed."""
         return self._latest_batch_date
 
     @latest_batch_date.setter
@@ -44,7 +50,7 @@ class PersistenceEntry(object):
         else:
             if not isinstance(latest_alert_ids, Iterable):
                 raise ValueError('latest alert IDs must be iterable')
-            if len(latest_alert_ids) > 0 and not all(is_valid_uuid(x) for x in latest_alert_ids):
+            if latest_alert_ids and not all(is_valid_uuid(x) for x in latest_alert_ids):
                 raise ValueError('latest alert IDs must only contain UUIDs')
             self._latest_alert_ids = {x for x in latest_alert_ids}
 
@@ -57,12 +63,16 @@ class PersistenceEntry(object):
         if not is_valid_uuid(organization_id):
             raise ValueError('invalid organization ID')
         self._organization_id = organization_id
+
+        self._latest_alert_ids = set()
+        self._latest_batch_date = None
         self.latest_batch_date = latest_batch_date
         self.latest_alert_ids = latest_alert_ids
 
     def __str__(self):
         return "%s(organization_id=%s, latest_batch_date=%s, latest_alert_ids=%s)" \
-               % (self.__class__.__name__, self.organization_id, self.latest_batch_date, self.latest_alert_ids)
+               % (self.__class__.__name__, self.organization_id, self.latest_batch_date,
+                  self.latest_alert_ids)
 
 
 @python_2_unicode_compatible
@@ -116,7 +126,9 @@ class AbstractPersistentAlertIterator(Iterator):
                 if not isinstance(self._persistence_entry, PersistenceEntry):
                     raise ValueError('load method should return a PersistenceEntry instance')
                 if not self._persistence_entry.organization_id == self.organization_id:
-                    raise ValueError('PersistenceEntry instance does not match organization ID ' + self.organization_id)
+                    raise ValueError(
+                        'PersistenceEntry instance does not match organization ID ' \
+                        + self.organization_id)
 
             if self._start_date:
                 if self._persistence_entry.latest_batch_date is None \
@@ -128,8 +140,8 @@ class AbstractPersistentAlertIterator(Iterator):
 
     @abstractmethod
     def _load(self):
-        """Abstract method that loads a given organization's persistence data. Implementations should
-        return a PersistenceEntry instance or None."""
+        """Abstract method that loads a given organization's persistence data. Implementations
+        should return a PersistenceEntry instance or None."""
         pass
 
     @abstractmethod
@@ -147,8 +159,9 @@ class AbstractPersistentAlertIterator(Iterator):
 
         # get the candidate dates in order, and discard the ones we've already fully processed
         dates = sorted([x for x in
-                        self.connection.list_organization_alert_dates(self.persistence_entry.organization_id,
-                                                                      'batchDate')])
+                        self.connection.list_organization_alert_dates(
+                            self.persistence_entry.organization_id,
+                            'batchDate')])
         if self.persistence_entry.latest_batch_date:
             dates = [x for x in dates if x >= self.persistence_entry.latest_batch_date]
 
@@ -191,7 +204,8 @@ class AbstractPersistentAlertIterator(Iterator):
 
     def __str__(self):
         return "%s(organization_id=%s, start_date=%s, persistence_entry=%s)" \
-               % (self.__class__.__name__, self.organization_id, self.start_date, self.persistence_entry)
+               % (self.__class__.__name__, self.organization_id, self.start_date,
+                  self.persistence_entry)
 
 
 @python_2_unicode_compatible
@@ -213,7 +227,8 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
         if isfile(self._filename):
             with open(self._filename, 'r') as f:
                 pe = json.load(f)
-                return PersistenceEntry(pe['organization_id'], pe['latest_batch_date'], pe['latest_alert_ids'])
+                return PersistenceEntry(pe['organization_id'], pe['latest_batch_date'],
+                                        pe['latest_alert_ids'])
         else:
             return None
 
@@ -227,4 +242,5 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
             json.dump(pe, f)
 
     def __str__(self):
-        return super(FilePersistentAlertIterator, self).__str__()[:-1] + ", filename=%s)" % self._filename
+        return super(FilePersistentAlertIterator, self).__str__()[:-1] + ", filename=%s)" \
+                                                                         % self._filename

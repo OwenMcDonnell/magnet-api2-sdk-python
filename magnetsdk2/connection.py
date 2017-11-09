@@ -1,15 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+This module implements the Connection class, which is used for low-level interaction with the
+Niddel Magnet v2 API.
+"""
 import logging
-import sys
 import os
-from requests import request
-import iso8601
-import datetime
+import sys
 from urllib import quote_plus
-from six.moves.urllib.parse import urlsplit
-from six.moves.configparser import RawConfigParser
 
-from validation import *
+from requests import request
+from six.moves.configparser import RawConfigParser
+from six.moves.urllib.parse import urlsplit
+
 from utc import UTC
+from validation import is_valid_uuid, is_valid_uri, is_valid_port, is_valid_alert_sortBy, \
+    is_valid_alert_status, parse_date
+
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -20,16 +26,17 @@ _PAGE_SIZE = 100
 
 
 class Connection(object):
-    """ This class encapsulates accessing the Niddel Magnet v2 API (https://api.niddel.com/v2) using a particular
-    configuration profile from ~/.magnetsdk/config, and is wrapper around the requests library that is used
-    for all accesses.
+    """ This class encapsulates accessing the Niddel Magnet v2 API (https://api.niddel.com/v2)
+     using a particular configuration profile from ~/.magnetsdk/config, and is wrapper around
+     the requests library that is used for all accesses.
     """
-
     def __init__(self, profile='default', api_key=None, endpoint=None):
         """ Initializes the connection with the proper configuration data.
         :param profile: the profile name to use in ~/.magnetsdk/config
-        :param api_key: if provided, this API key is used instead of the one on the configuration file
-        :param endpoint: if provided this endpoint URL is used instead of the one on the configuration file
+        :param api_key: if provided, this API key is used instead of the one on the
+        configuration file
+        :param endpoint: if provided this endpoint URL is used instead of the one on the
+        configuration file
         """
         # initialize logger and credential cache
         self._logger = logging.getLogger('magnetsdk2')
@@ -74,23 +81,26 @@ class Connection(object):
         else:
             self.verify = True
 
-        self._logger.debug('%s: endpoint=%r, verify=%r' % (self.__class__.__name__, self.endpoint, self.verify))
-        # self._session = None
+        self._logger.debug('%s: endpoint=%r, verify=%r', self.__class__.__name__, self.endpoint,
+                           self.verify)
         self._proxies = None
 
     def __del__(self):
         self.close()
 
-    def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None, proxy_proto='https'):
+    def set_proxy(self, proxy, proxy_port=None, proxy_user=None, proxy_pass=None,
+                  proxy_proto='https'):
         """Configure this connection to use an HTTPS proxy to access the API endpoint.
         :param proxy: string containing the proxy hostname or iP address
         :param proxy_port: integer containing the proxy port to connect to (optional)
-        :param proxy_user: string containing the username to use for basic authentication to the proxy (optional)
-        :param proxy_pass: string containing the password to use for basic authentication to the proxy (optional)
+        :param proxy_user: string containing the username to use for basic authentication to the
+        proxy (optional)
+        :param proxy_pass: string containing the password to use for basic authentication to the
+        proxy (optional)
         :param proxy_proto: string containing the proxy protocol equal to either 'http' or 'https'
         :return: the proxy URL
         """
-        if not isinstance(proxy_proto, six.string_types) or not proxy_proto in ('http', 'https'):
+        if not isinstance(proxy_proto, six.string_types) or proxy_proto not in ('http', 'https'):
             raise ValueError("proxy protocol must be a string")
         proxy_url = proxy_proto + '://'
         proxy_url_sanitized = proxy_proto + '://'
@@ -122,12 +132,14 @@ class Connection(object):
         return proxy_url
 
     def set_proxy_url(self, proxy_url):
+        """Configure this connection to use an HTTPS proxy to access the API endpoint using a
+        URL as per http://docs.python-requests.org/en/master/user/advanced/#proxies
+        :param proxy_url: string containing the proxy URL
+        """
         self._proxies = {
             'http': proxy_url,
             'https': proxy_url
         }
-        # if self._session:
-        #     self._session.proxies = self._proxies
 
     def clear_proxy(self):
         """Removes the existing proxy configuration so that """
@@ -139,46 +151,27 @@ class Connection(object):
         """ Closes the Connection object.
         """
         pass
-        # if self._session:
-        #     self._session.close()
-        #     self._session = None
 
     def _request(self, method, path, params=None, body=None):
-        """ Performs an HTTP operation using the base API endpoint, API key and SSL validation / cert pinning obtained
-        from the configuration file.
+        """ Performs an HTTP operation using the base API endpoint, API key and SSL validation /
+        cert pinning obtained from the configuration file.
         :param method: string with the the HTTP method to use ('GET', 'PUT', etc.)
         :param path: string with the path to append to the base API endpoint
         :param params: dict with the query parameters to submit
         :return: the requests.Response object
         """
-        # if self._session is None:
-        #    self._session = requests.Session()
-        #    self._session.verify = self.verify
-        #    self._session.proxies = self._proxies
-        #    self._session.auth = AuthHandler({self.endpoint: ApiAuth(self.api_key)})
-        #    self._session.headers.update({
-        #        _API_KEY_HEADER: self.api_key,
-        #        "Accept-Encoding": "gzip, deflate",
-        #        "User-Agent": "magnet-sdk-python",
-        #        "Accept": "application/json"
-        #    })
-        # self._logger.info(repr(self._session.headers))
-        # response = self._session.request(method=method, url=self.endpoint + path, params=params, json=body,
-        #                                  timeout=(5,60), auth = AuthHandler({self.endpoint: ApiAuth(self.api_key)}),
-        #                                  headers={_API_KEY_HEADER: self.api_key,
-        #                                           "Accept-Encoding": "gzip, deflate",
-        #                                           "User-Agent": "magnet-sdk-python",
-        #                                           "Accept": "application/json"})
-        response = request(method=method, url=self.endpoint + path, params=params, json=body, verify=self.verify,
+        response = request(method=method, url=self.endpoint + path, params=params, json=body,
+                           verify=self.verify,
                            proxies=self._proxies, timeout=(5, 60),
                            headers={_API_KEY_HEADER: self.api_key,
                                     "Accept-Encoding": "gzip, deflate",
                                     "User-Agent": "magnet-sdk-python",
                                     "Accept": "application/json"})
         if response.request.body:
-            self._logger.debug('{0:s} {1:s} ({2:d} bytes in body)'.format(response.request.method, \
-                                                                          response.request.url, \
-                                                                          len(response.request.body)))
+            msg = '{0:s} {1:s} ({2:d} bytes in body)'.format(response.request.method,
+                                                             response.request.url,
+                                                             len(response.request.body))
+            self._logger.debug(msg)
         else:
             self._logger.debug('{0:s} {1:s}'.format(response.request.method, response.request.url))
         self._logger.debug("got {0:d} response".format(response.status_code))
@@ -194,15 +187,15 @@ class Connection(object):
                 if i >= retries or response.status_code in ok_status:
                     return response
             except:
-                self._logger.exception(
-                    'error at try %i of %s request for %s with params=%s' % (i, method, path, repr(params)))
+                self._logger.exception('error at try %i of %s request for %s with params=%s', i,
+                                       method, path, repr(params))
                 if i >= retries:
                     six.reraise(*sys.exc_info())
             i += 1
 
     def iter_organizations(self):
-        """ Generator that allows iteration over all of the organizations that this connections's API key
-        has access to.
+        """ Generator that allows iteration over all of the organizations that this connections's
+        API key has access to.
         :return: an iterator over the decoded JSON objects that represent organizations.
         """
         params = {
@@ -212,10 +205,10 @@ class Connection(object):
         while True:
             response = self._request_retry("GET", path='organizations', params=params)
             if response.status_code == 200:
-                orgs = response.json()
-                for o in orgs:
-                    yield o
-                if len(orgs) < _PAGE_SIZE:
+                organization_list = response.json()
+                for organization in organization_list:
+                    yield organization
+                if len(organization_list) < _PAGE_SIZE:
                     return
             elif response.status_code == 404:
                 return
@@ -224,7 +217,8 @@ class Connection(object):
             params['page'] += 1
 
     def get_organization(self, organization_id):
-        """ Retrieves detailed data from an organization this API key has accessed to based on its ID.
+        """ Retrieves detailed data from an organization this API key has accessed to based on its
+        ID.
         :param organization_id: string with the UUID-style unique ID of the organization
         :return: decoded JSON objects that represents the organization or None if not found
         """
@@ -239,9 +233,9 @@ class Connection(object):
             response.raise_for_status()
 
     def get_organization_credentials(self, organization_id, cache=True):
-        """ Retrieves a new set of temporary AWS credentials to allow access to an organization's S3 bucket.
-        Typically used to upload log files. Will cache the response and return the same credentials if they
-        have at least 10 minutes before expiration.
+        """ Retrieves a new set of temporary AWS credentials to allow access to an organization's
+        S3 bucket. Typically used to upload log files. Will cache the response and return the same
+        credentials if they have at least 10 minutes before expiration.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param cache: boolean controlling whether credentials are cached in this connection
         :return: decoded JSON objects that represents the credentials
@@ -269,13 +263,16 @@ class Connection(object):
         else:
             response.raise_for_status()
 
-    def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None, sortBy="logDate", status=None):
+    def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None,
+                                 sortBy="logDate", status=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param fromDate: only list alerts with dates >= this parameter
         :param toDate: only list alerts with dates <= this parameter
-        :param sortBy: one of 'logDate' or 'batchDate', controls which date field fromDate and toDate apply to
-        :param status: a list or set containing one or more of 'new', 'under_investigation', 'rejected', 'resolved'
+        :param sortBy: one of 'logDate' or 'batchDate', controls which date field fromDate and
+        toDate apply to
+        :param status: a list or set containing one or more of 'new', 'under_investigation',
+        'rejected', 'resolved'
         :return: an iterator over the decoded JSON objects that represent alerts.
         """
         if not is_valid_uuid(organization_id):
@@ -284,7 +281,8 @@ class Connection(object):
             raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
         if status is not None and not is_valid_alert_status(status):
             raise ValueError(
-                "status must be an iterable with one or more of 'new', 'under_investigation', 'rejected' or 'resolved'")
+                "status must be an iterable with one or more of 'new', 'under_investigation', " +
+                "'rejected' or 'resolved'")
 
         # loop over alert pages and yield them
         params = {
@@ -300,18 +298,19 @@ class Connection(object):
             params['status'] = status
 
         while True:
-            response = self._request_retry("GET", path='organizations/%s/alerts' % organization_id, params=params)
+            response = self._request_retry("GET", path='organizations/%s/alerts' % organization_id,
+                                           params=params)
             if response.status_code == 200:
-                alerts = response.json()
-                for a in alerts:
-                    yield a
-                if len(alerts) < _PAGE_SIZE:
+                alert_list = response.json()
+                for alert in alert_list:
+                    yield alert
+                if len(alert_list) < _PAGE_SIZE:
                     return
             elif response.status_code == 404:
                 return
             else:
                 response.raise_for_status()
-            params['page'] += 1
+            params['pae'] += 1
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.
@@ -324,7 +323,8 @@ class Connection(object):
         if not is_valid_alert_sortBy(sortBy):
             raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
 
-        response = self._request_retry("GET", path='organizations/%s/alerts/dates' % organization_id,
+        response = self._request_retry("GET",
+                                       path='organizations/%s/alerts/dates' % organization_id,
                                        params={'sortBy': sortBy})
         if response.status_code == 200:
             return set(response.json())
@@ -334,6 +334,9 @@ class Connection(object):
             response.raise_for_status()
 
     def get_me(self):
+        """Queries the API about the user that owns the API key in use.
+        :return: a dict representing the user details
+        """
         response = self._request_retry("GET", path="me", ok_status=(200,))
         if response.status_code == 200:
             return response.json()
