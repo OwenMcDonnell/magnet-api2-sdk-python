@@ -310,7 +310,7 @@ class Connection(object):
                 return
             else:
                 response.raise_for_status()
-            params['pae'] += 1
+            params['page'] += 1
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.

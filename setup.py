@@ -32,5 +32,8 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Software Development :: Libraries :: Application Frameworks'
-    ]
+    ],
+    entry_points = {
+        'console_scripts': ['niddel=magnetsdk2.cli:main']
+    }
 )

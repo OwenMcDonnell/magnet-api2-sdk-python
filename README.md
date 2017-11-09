@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/magnetsdk2.svg)](https://badge.fury.io/py/magnetsdk2)
+
 # Niddel Magnet v2 API Python SDK
 
 A simple client that allows idiomatic access to the 
@@ -88,3 +90,61 @@ Though the provided implementation saves the data to a JSON file, it is easy to 
 means of persistence by creating subclasses of 
 `magnetsdk2.iterator.AbstractPersistentAlertIterator` that implement the abstract `_save`
 and `_load` methods.
+
+
+## Command-line Utility
+
+Starting with version 1.2.0, the package installs a `niddel` command-line utility which
+can be used to perform most of the same functionalities available on the SDK. First install
+the package:
+```bash
+$ pip install magnetsdk2
+```
+
+Then, you can see that a `--profile` option can be provided to select an alternative API key
+from `~/.magnetsdk/config`, as described previously:
+```bash
+$ niddel -h
+usage: niddel [-h] [-p PROFILE] [-i] [-v] {me,organizations,alerts} ...
+
+Command-line utility to interact with the Niddel Magnet v2 API
+
+positional arguments:
+  {me,organizations,alerts}
+    me                  display API key owner information
+    organizations       list basic organization information
+    alerts              list an organization's alerts
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PROFILE, --profile PROFILE
+                        which profile (from ~/.magnetsdk/config) to obtain API
+                        key from
+  -i, --indent          indent JSON output
+  -v, --verbose         set verbose mode
+```
+
+You can even use a persistent alert iterator by providing a file name with `--persist` when listing
+alerts:
+```bash
+$ niddel alerts -h
+usage: niddel alerts [-h] [--start START] [-p PERSIST] organization
+
+list an organization's alerts
+
+positional arguments:
+  organization          ID of the organization
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --start START         initial batch date to process in YYYY-MM-DD format
+  -p PERSIST, --persist PERSIST
+                        file to store persistent state data, to ensure only
+                        alerts that haven't been seen before are part of the
+                        output
+```
+
+Keep in mind that the persistence state is only saved immediately before the command exits, after
+all unprocessed alerts have been printed to stdout. So if the CLI utility is interrupted or if an 
+exception occurs mid-processing, no state is saved and any alerts output in this failed execution 
+are not considered processed.
