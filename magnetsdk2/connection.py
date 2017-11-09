@@ -8,6 +8,7 @@ import os
 import sys
 from urllib import quote_plus
 
+import six
 from requests import request
 from six.moves.configparser import RawConfigParser
 from six.moves.urllib.parse import urlsplit
@@ -15,7 +16,6 @@ from six.moves.urllib.parse import urlsplit
 from magnetsdk2.utc import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
     is_valid_alert_sortBy, is_valid_alert_status, parse_date
-
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -30,6 +30,7 @@ class Connection(object):
      using a particular configuration profile from ~/.magnetsdk/config, and is wrapper around
      the requests library that is used for all accesses.
     """
+
     def __init__(self, profile='default', api_key=None, endpoint=None):
         """ Initializes the connection with the proper configuration data.
         :param profile: the profile name to use in ~/.magnetsdk/config

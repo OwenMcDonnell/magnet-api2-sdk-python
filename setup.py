@@ -20,7 +20,7 @@ setup(
     long_description=read('README.rst'),
     author='Niddel Corp.',
     author_email='contact@niddel.com',
-    version="1.2.1",
+    version="1.2.3",
     url='http://github.com/mlsecproject/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1',
