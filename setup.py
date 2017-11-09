@@ -1,23 +1,30 @@
-from __future__ import print_function
+import io
+import codecs
+import os
+import sys
 
-from pypandoc import convert_file
 from setuptools import setup
 
-from magnetsdk2.version import __version__
-
-long_description = convert_file('README.md', 'rst')
+def read(*filenames, **kwargs):
+    encoding = kwargs.get('encoding', 'utf-8')
+    sep = kwargs.get('sep', '\n')
+    buf = []
+    for filename in filenames:
+        with io.open(filename, encoding=encoding) as f:
+            buf.append(f.read())
+    return sep.join(buf)
 
 setup(
     name='magnetsdk2',
     description='Python SDK to access the Niddel Magnet API v2',
-    long_description=long_description,
+    long_description=read('README.rst'),
     author='Niddel Corp.',
     author_email='contact@niddel.com',
-    version=__version__,
+    version="1.2.1",
     url='http://github.com/mlsecproject/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1',
-                      'rfc3987>=1.3.7,<2', 'pypandoc>=1.4,<2'],
+                      'rfc3987>=1.3.7,<2'],
     packages=['magnetsdk2'],
     include_package_data=True,
     platforms='any',
