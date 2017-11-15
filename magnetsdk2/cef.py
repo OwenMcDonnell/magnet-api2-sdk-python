@@ -55,7 +55,7 @@ def extension(fields):
     :param fields: dict containing fields to include
     :return: escaped and trimmed UTF-8 encoded str / bytes
     """
-    fields = sorted([(k, v) for k, v in six.iteritems(fields) if v], key=lambda (x): x[0])
+    fields = sorted([(k, v) for k, v in six.iteritems(fields) if v], key=lambda x: x[0])
     return ' '.join([e[0].strip() + '=' + escape_extension_value(e[1])
                      for e in fields]).strip()
 
