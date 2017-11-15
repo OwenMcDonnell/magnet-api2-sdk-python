@@ -128,7 +128,8 @@ You can even use a persistent alert iterator by providing a file name with `--pe
 alerts:
 ```bash
 $ niddel alerts -h
-usage: niddel alerts [-h] [--start START] [-p PERSIST] organization
+usage: niddel alerts [-h] [--start START] [-p PERSIST] [-f {json,cef}]
+                     organization
 
 list an organization's alerts
 
@@ -142,9 +143,15 @@ optional arguments:
                         file to store persistent state data, to ensure only
                         alerts that haven't been seen before are part of the
                         output
+  -f {json,cef}, --format {json,cef}
+                        format in which to output alerts
 ```
 
 Keep in mind that the persistence state is only saved immediately before the command exits, after
 all unprocessed alerts have been printed to stdout. So if the CLI utility is interrupted or if an 
 exception occurs mid-processing, no state is saved and any alerts output in this failed execution 
 are not considered processed.
+
+The default output format for alerts is JSON, but if you provide `--format cef` then the 
+[ArcSight Common Event Format](https://community.saas.hpe.com/t5/ArcSight-Connectors/ArcSight-Common-Event-Format-CEF-Guide/ta-p/1589306)
+will be used instead.

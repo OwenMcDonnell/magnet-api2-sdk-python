@@ -20,18 +20,19 @@ setup(
     long_description=read('README.rst'),
     author='Niddel Corp.',
     author_email='contact@niddel.com',
-    version="1.2.3",
+    version="1.3.0",
     url='http://github.com/mlsecproject/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1',
                       'rfc3987>=1.3.7,<2'],
+    tests_require=['pytest>=3.2.5,<4'],
+    setup_requires=['pytest-runner>=3,<4'],
     packages=['magnetsdk2'],
     include_package_data=True,
     platforms='any',
-    zip_safe=False,
     classifiers=[
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
         'Development Status :: 5 - Production/Stable',
         'Natural Language :: English',
         'Environment :: Other Environment',
@@ -39,8 +40,8 @@ setup(
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Software Development :: Libraries :: Application Frameworks'
+        'Topic :: Security',
+        'Topic :: Software Development :: Libraries',
     ],
     entry_points = {
         'console_scripts': ['niddel=magnetsdk2.cli:main']
