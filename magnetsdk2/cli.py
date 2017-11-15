@@ -7,10 +7,10 @@ v2 API using magnetsdk2.
 import argparse
 import json
 import logging
+from codecs import BOM_UTF8
+from os import linesep
 from sys import stdout, stderr
 from uuid import UUID
-from os import linesep
-from codecs import BOM_UTF8
 
 from magnetsdk2 import Connection
 from magnetsdk2.cef import convert_alert
@@ -76,6 +76,7 @@ def main():
         logger.setLevel(logging.DEBUG)
     conn = Connection(profile=args.profile)
     args.func(conn, args)
+    args.outfile.flush()
 
 
 def parse_arg_date(value):
@@ -96,7 +97,6 @@ def command_organizations(conn, args):
         for organization in conn.iter_organizations():
             json.dump(organization, args.outfile, indent=args.indent)
             args.outfile.write(linesep)
-    args.outfile.flush()
 
 
 def command_alerts(conn, args):
@@ -117,7 +117,6 @@ def command_alerts(conn, args):
         elif args.format == 'cef':
             convert_alert(args.outfile, alert, args.organization.__str__())
         args.outfile.write(linesep)
-    args.outfile.flush()
 
     if args.persist:
         iterator.save()
