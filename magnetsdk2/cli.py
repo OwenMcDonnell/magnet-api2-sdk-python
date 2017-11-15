@@ -76,8 +76,6 @@ def main():
         logger.setLevel(logging.DEBUG)
     conn = Connection(profile=args.profile)
     args.func(conn, args)
-    if args.outfile != stdout:
-        args.outfile.close()
 
 
 def parse_arg_date(value):
@@ -88,16 +86,17 @@ def parse_arg_date(value):
 
 
 def command_me(conn, args):
-    json.dump(args.outfile, conn.get_me(), indent=args.indent)
+    json.dump(conn.get_me(), args.outfile, indent=args.indent)
 
 
 def command_organizations(conn, args):
     if args.id:
-        json.dump(args.outfile, conn.get_organization(args.id.__str__()), indent=args.indent)
+        json.dump(conn.get_organization(args.id.__str__()), args.outfile, indent=args.indent)
     else:
         for organization in conn.iter_organizations():
-            args.outfile.write(json.dumps(organization, indent=args.indent))
+            json.dump(organization, args.outfile, indent=args.indent)
             args.outfile.write(linesep)
+    args.outfile.flush()
 
 
 def command_alerts(conn, args):
@@ -114,10 +113,11 @@ def command_alerts(conn, args):
 
     for alert in iterator:
         if args.format == 'json':
-            json.dump(args.outfile, alert, indent=args.indent)
+            json.dump(alert, args.outfile, indent=args.indent)
         elif args.format == 'cef':
             convert_alert(args.outfile, alert, args.organization.__str__())
         args.outfile.write(linesep)
+    args.outfile.flush()
 
     if args.persist:
         iterator.save()
