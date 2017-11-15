@@ -6,12 +6,11 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
-from urllib import quote_plus
 
 import six
 from requests import request
 from six.moves.configparser import RawConfigParser
-from six.moves.urllib.parse import urlsplit
+from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
