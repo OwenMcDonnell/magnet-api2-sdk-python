@@ -7,10 +7,13 @@ v2 API using magnetsdk2.
 import argparse
 import json
 import logging
-from sys import stderr
+from sys import stdout, stderr
 from uuid import UUID
+from os import linesep
+from codecs import BOM_UTF8
 
 from magnetsdk2 import Connection
+from magnetsdk2.cef import convert_alert
 from magnetsdk2.iterator import FilePersistentAlertIterator
 from magnetsdk2.validation import parse_date
 
@@ -33,6 +36,9 @@ def main():
     parser.add_argument("-i", "--indent", help="indent JSON output", action="store_const", const=4)
     parser.add_argument("-v", "--verbose", help="set verbose mode", action="store_true",
                         default=False)
+    parser.add_argument("-o", "--outfile",
+                        help="destination file to write to, if exists will be overwritten",
+                        type=argparse.FileType('wb'), default=stdout)
     parser.set_defaults(indent=None)
     subparsers = parser.add_subparsers()
 
@@ -60,6 +66,8 @@ def main():
     alerts_parser.add_argument("-p", "--persist",
                                help="file to store persistent state data, to ensure only alerts " +
                                     "that haven't been seen before are part of the output")
+    alerts_parser.add_argument("-f", "--format", choices=['json', 'cef'], default='json',
+                               help="format in which to output alerts")
     alerts_parser.set_defaults(func=command_alerts, start=None, persist=None)
 
     # parse arguments, open connection and dispatch to proper function
@@ -68,6 +76,8 @@ def main():
         logger.setLevel(logging.DEBUG)
     conn = Connection(profile=args.profile)
     args.func(conn, args)
+    if args.outfile != stdout:
+        args.outfile.close()
 
 
 def parse_arg_date(value):
@@ -78,15 +88,16 @@ def parse_arg_date(value):
 
 
 def command_me(conn, args):
-    print json.dumps(conn.get_me(), indent=args.indent)
+    json.dump(args.outfile, conn.get_me(), indent=args.indent)
 
 
 def command_organizations(conn, args):
     if args.id:
-        print json.dumps(conn.get_organization(args.id.__str__()), indent=args.indent)
+        json.dump(args.outfile, conn.get_organization(args.id.__str__()), indent=args.indent)
     else:
         for organization in conn.iter_organizations():
-            print json.dumps(organization, indent=args.indent)
+            args.outfile.write(json.dumps(organization, indent=args.indent))
+            args.outfile.write(linesep)
 
 
 def command_alerts(conn, args):
@@ -97,8 +108,16 @@ def command_alerts(conn, args):
     else:
         iterator = conn.iter_organization_alerts(organization_id=args.organization.__str__(),
                                                  fromDate=args.start, sortBy='batchDate')
+
+    if args.outfile != stdout and args.format == 'cef':
+        args.outfile.write(BOM_UTF8)
+
     for alert in iterator:
-        print json.dumps(alert, indent=args.indent)
+        if args.format == 'json':
+            json.dump(args.outfile, alert, indent=args.indent)
+        elif args.format == 'cef':
+            convert_alert(args.outfile, alert, args.organization.__str__())
+        args.outfile.write(linesep)
 
     if args.persist:
         iterator.save()

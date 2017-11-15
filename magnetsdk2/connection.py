@@ -13,7 +13,7 @@ from requests import request
 from six.moves.configparser import RawConfigParser
 from six.moves.urllib.parse import urlsplit
 
-from magnetsdk2.utc import UTC
+from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
     is_valid_alert_sortBy, is_valid_alert_status, parse_date
 
