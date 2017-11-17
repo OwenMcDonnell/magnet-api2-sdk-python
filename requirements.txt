@@ -5,3 +5,4 @@ requests
 six
 iso8601
 rfc3987
+boto3

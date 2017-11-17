@@ -1,4 +1,5 @@
 [![PyPI version](https://badge.fury.io/py/magnetsdk2.svg)](https://badge.fury.io/py/magnetsdk2)
+[![Build status](https://ci.appveyor.com/api/projects/status/7k25x3lphcxagb7t/branch/master?svg=true)](https://ci.appveyor.com/project/asieira/magnet-api2-sdk-python/branch/master)
 
 # Niddel Magnet v2 API Python SDK
 
