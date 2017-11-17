@@ -1,4 +1,4 @@
-|PyPI version|
+|PyPI version| |Build status|
 
 Niddel Magnet v2 API Python SDK
 ===============================
@@ -178,3 +178,5 @@ will be used instead.
 
 .. |PyPI version| image:: https://badge.fury.io/py/magnetsdk2.svg
    :target: https://badge.fury.io/py/magnetsdk2
+.. |Build status| image:: https://ci.appveyor.com/api/projects/status/7k25x3lphcxagb7t/branch/master?svg=true
+   :target: https://ci.appveyor.com/project/asieira/magnet-api2-sdk-python/branch/master
