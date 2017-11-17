@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""
+This module implements basic validation and conversion logic for API data.
+"""
 import datetime
 import re
 from collections import Iterable
