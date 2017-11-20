@@ -107,15 +107,17 @@ Then, you can see that a `--profile` option can be provided to select an alterna
 from `~/.magnetsdk/config`, as described previously:
 ```bash
 $ niddel -h
-usage: niddel [-h] [-p PROFILE] [-i] [-v] {me,organizations,alerts} ...
+usage: niddel [-h] [-p PROFILE] [-i] [-v] [-o OUTFILE]
+              {me,organizations,alerts,logs} ...
 
 Command-line utility to interact with the Niddel Magnet v2 API
 
 positional arguments:
-  {me,organizations,alerts}
+  {me,organizations,alerts,logs}
     me                  display API key owner information
     organizations       list basic organization information
     alerts              list an organization's alerts
+    logs                upload, download or list log files
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -124,6 +126,9 @@ optional arguments:
                         key from
   -i, --indent          indent JSON output
   -v, --verbose         set verbose mode
+  -o OUTFILE, --outfile OUTFILE
+                        destination file to write to, if exists will be
+                        overwritten
 ```
 
 You can even use a persistent alert iterator by providing a file name with `--persist` when listing
