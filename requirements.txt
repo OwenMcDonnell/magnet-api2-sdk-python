@@ -1,8 +1,10 @@
 pylint
 cheesecake
 pypandoc
-requests
-six
-iso8601
-rfc3987
-boto3
+requests>=2.12.5,<3
+six>=1.10,<2
+iso8601>=0.1.12,<1
+rfc3987>=1.3.7,<2
+boto3>=1.4,<2
+pytest>=3.2.5,<4
+pytest-runner>=3,<4
