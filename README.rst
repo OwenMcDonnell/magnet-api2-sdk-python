@@ -1,4 +1,4 @@
-|PyPI version| |Build status|
+|PyPI version| |Build status| |Dependency Status|
 
 Niddel Magnet v2 API Python SDK
 ===============================
@@ -123,15 +123,17 @@ previously:
 .. code:: bash
 
     $ niddel -h
-    usage: niddel [-h] [-p PROFILE] [-i] [-v] {me,organizations,alerts} ...
+    usage: niddel [-h] [-p PROFILE] [-i] [-v] [-o OUTFILE]
+                  {me,organizations,alerts,logs} ...
 
-    Command-line utility to interact with the Niddel Magnet v2 API
+    Command-line utility to interact with the Niddel Magnet v2 API (v1.4.1)
 
     positional arguments:
-      {me,organizations,alerts}
+      {me,organizations,alerts,logs}
         me                  display API key owner information
         organizations       list basic organization information
         alerts              list an organization's alerts
+        logs                upload, download or list log files
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -140,6 +142,9 @@ previously:
                             key from
       -i, --indent          indent JSON output
       -v, --verbose         set verbose mode
+      -o OUTFILE, --outfile OUTFILE
+                            destination file to write to, if exists will be
+                            overwritten
 
 You can even use a persistent alert iterator by providing a file name
 with ``--persist`` when listing alerts:
@@ -180,3 +185,5 @@ will be used instead.
    :target: https://badge.fury.io/py/magnetsdk2
 .. |Build status| image:: https://ci.appveyor.com/api/projects/status/7k25x3lphcxagb7t/branch/master?svg=true
    :target: https://ci.appveyor.com/project/asieira/magnet-api2-sdk-python/branch/master
+.. |Dependency Status| image:: https://dependencyci.com/github/Niddel/magnet-api2-sdk-python/badge
+   :target: https://dependencyci.com/github/Niddel/magnet-api2-sdk-python

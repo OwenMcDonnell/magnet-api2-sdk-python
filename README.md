@@ -110,7 +110,7 @@ $ niddel -h
 usage: niddel [-h] [-p PROFILE] [-i] [-v] [-o OUTFILE]
               {me,organizations,alerts,logs} ...
 
-Command-line utility to interact with the Niddel Magnet v2 API
+Command-line utility to interact with the Niddel Magnet v2 API (v1.4.1)
 
 positional arguments:
   {me,organizations,alerts,logs}
