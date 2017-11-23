@@ -19,7 +19,7 @@ from uuid import UUID
 import boto3
 import six
 
-from magnetsdk2 import Connection
+from magnetsdk2 import Connection, __version__
 from magnetsdk2.cef import convert_alert
 from magnetsdk2.iterator import FilePersistentAlertIterator
 from magnetsdk2.time import UTC
@@ -38,7 +38,7 @@ def main():
     # top-level parser
     parser = argparse.ArgumentParser(prog='niddel',
                                      description='Command-line utility to interact with the ' +
-                                                 'Niddel Magnet v2 API')
+                                                 'Niddel Magnet v2 API (v{0:s})'.format(__version__))
     parser.add_argument("-p", "--profile",
                         help="which profile (from ~/.magnetsdk/config) to obtain API key from",
                         default='default')

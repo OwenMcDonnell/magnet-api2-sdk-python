@@ -1,9 +1,8 @@
 import io
-import codecs
-import os
-import sys
 
 from setuptools import setup
+from magnetsdk2 import __version__
+
 
 def read(*filenames, **kwargs):
     encoding = kwargs.get('encoding', 'utf-8')
@@ -14,13 +13,14 @@ def read(*filenames, **kwargs):
             buf.append(f.read())
     return sep.join(buf)
 
+
 setup(
     name='magnetsdk2',
     description='Python SDK to access the Niddel Magnet API v2',
     long_description=read('README.rst'),
     author='Niddel Corp.',
     author_email='contact@niddel.com',
-    version="1.4.0",
+    version=__version__,
     url='https://github.com/niddel/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1',
@@ -47,7 +47,7 @@ setup(
         'Topic :: Security',
         'Topic :: Software Development :: Libraries',
     ],
-    entry_points = {
+    entry_points={
         'console_scripts': ['niddel=magnetsdk2.cli:main']
     }
 )
