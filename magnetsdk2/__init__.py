@@ -4,7 +4,7 @@ A simple client that allows idiomatic access to the Niddel Magnet v2 REST API
 (https://api.niddel.com/v2). Uses the wonderful requests (http://docs.python-requests.org/)
 package to perform the requests.
 """
-__version__ = '1.4.1'
+__version__ = '1.5.0'
 
 # set up package logger
 import logging

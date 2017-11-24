@@ -5,6 +5,7 @@ This module implements basic validation and conversion logic for API data.
 import datetime
 import re
 from collections import Iterable
+from uuid import UUID
 
 import iso8601
 import rfc3987
@@ -19,7 +20,8 @@ def is_valid_uuid(value):
     :param value: string to validate
     :return: a boolean
     """
-    return isinstance(value, six.string_types) and _UUID_REGEX.match(value)
+    return isinstance(value, UUID) or \
+           (isinstance(value, six.string_types) and _UUID_REGEX.match(value))
 
 
 def is_valid_uri(value):

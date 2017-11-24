@@ -8,6 +8,9 @@ REST API <https://api.niddel.com/v2>`__. Uses the wonderful
 `requests <http://docs.python-requests.org/>`__ package to perform the
 requests.
 
+Release history:
+https://github.com/Niddel/magnet-api2-sdk-python/releases
+
 Configuring Credentials
 -----------------------
 

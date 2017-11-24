@@ -38,7 +38,8 @@ def main():
     # top-level parser
     parser = argparse.ArgumentParser(prog='niddel',
                                      description='Command-line utility to interact with the ' +
-                                                 'Niddel Magnet v2 API (v{0:s})'.format(__version__))
+                                                 'Niddel Magnet v2 API (v{0:s})'.format(
+                                                     __version__))
     parser.add_argument("-p", "--profile",
                         help="which profile (from ~/.magnetsdk/config) to obtain API key from",
                         default='default')
@@ -68,8 +69,10 @@ def main():
     alerts_parser = subparsers.add_parser('alerts',
                                           help="list an organization's alerts",
                                           description="list an organization's alerts")
-    alerts_parser.add_argument("organization", help="ID of the organization",
-                               type=UUID)
+    alerts_parser.add_argument("organization",
+                               help="ID of the organization, if omitted the API key owner's " +
+                                    "default organization is used",
+                               nargs='?', type=UUID)
     alerts_parser.add_argument("--start", help="initial batch date to process in YYYY-MM-DD format",
                                type=parse_arg_date)
     alerts_parser.add_argument("-p", "--persist",
@@ -79,13 +82,31 @@ def main():
                                help="format in which to output alerts")
     alerts_parser.set_defaults(func=command_alerts, start=None, persist=None, parser=alerts_parser)
 
+    # "whitelists" and "blacklists" commands
+    for scope in ('white', 'black',):
+        wlbl_parser = subparsers.add_parser(scope + 'lists',
+                                            help="list an organization's " + scope + " list",
+                                            description="list an organization's " + scope + " list")
+        wlbl_parser.add_argument("organization",
+                                 help="ID of the organization, if omitted the API key owner's " +
+                                      "default organization is used",
+                                 nargs='?', type=UUID)
+        wlbl_parser.add_argument("--id", help="get details on " + scope + " list entry with the " +
+                                              "provided ID",
+                                 type=UUID, required=False)
+
+        wlbl_parser.set_defaults(func=command_wl_bl, scope=scope)
+
     # "logs" command
     logs_parser = subparsers.add_parser('logs',
                                         help="upload, download or list log files",
                                         description="use temporary credentials to access " +
                                                     "log files to an organization's assigned " +
                                                     "S3 bucket's upload folder")
-    logs_parser.add_argument("organization", help="ID of the organization", type=UUID)
+    logs_parser.add_argument("organization",
+                             help="ID of the organization, if omitted the API key owner's " +
+                                  "default organization is used",
+                             type=UUID, nargs='?')
     logs_parser.set_defaults(parser=logs_parser)
 
     logs_subparsers = logs_parser.add_subparsers()
@@ -116,6 +137,8 @@ def main():
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # open connection and dispatch to proper function
     try:
@@ -155,7 +178,7 @@ def command_me(conn, args):
 
 def command_organizations(conn, args):
     if args.id:
-        json.dump(conn.get_organization(args.id.__str__()), args.outfile, indent=args.indent)
+        json.dump(conn.get_organization(args.id), args.outfile, indent=args.indent)
     else:
         for organization in conn.iter_organizations():
             try:
@@ -170,12 +193,16 @@ def command_organizations(conn, args):
 
 
 def command_alerts(conn, args):
+    if not args.organization:
+        args.organization = UUID(conn.get_me()['defaultOrganizationId'])
+        logger.info('using default organization %s' % args.organization)
+
     if args.persist:
         iterator = FilePersistentAlertIterator(filename=args.persist, connection=conn,
-                                               organization_id=args.organization.__str__(),
+                                               organization_id=args.organization,
                                                start_date=args.start)
     else:
-        iterator = conn.iter_organization_alerts(organization_id=args.organization.__str__(),
+        iterator = conn.iter_organization_alerts(organization_id=args.organization,
                                                  fromDate=args.start, sortBy='batchDate')
 
     if args.outfile != stdout and args.format == 'cef':
@@ -186,7 +213,7 @@ def command_alerts(conn, args):
             if args.format == 'json':
                 json.dump(alert, args.outfile, indent=args.indent)
             elif args.format == 'cef':
-                convert_alert(args.outfile, alert, args.organization.__str__())
+                convert_alert(args.outfile, alert, args.organization)
             args.outfile.write(linesep)
         except IOError as ioe:
             if ioe.errno == EPIPE and args.outfile == stdout:
@@ -200,14 +227,18 @@ def command_alerts(conn, args):
 
 
 def command_logs_list(conn, args):
+    if not args.organization:
+        args.organization = UUID(conn.get_me()['defaultOrganizationId'])
+        logger.info('using default organization %s' % args.organization)
+
     # connect to S3
-    creds = conn.get_organization_credentials(args.organization.__str__())
+    creds = conn.get_organization_credentials(args.organization)
     bucket = boto3.resource('s3', aws_access_key_id=creds['accessKeyId'],
                             aws_secret_access_key=creds['secretAccessKey'],
                             aws_session_token=creds['sessionToken'],
                             region_name=creds['bucketRegion']).Bucket(creds['bucket'])
     logger.debug('opened S3 bucket %s in %s successfully', creds['bucket'], creds['bucketRegion'])
-    prefix = conn.get_organization(args.organization.__str__())['properties']['bucketUploadPrefix']
+    prefix = conn.get_organization(args.organization)['properties']['bucketUploadPrefix']
 
     # list objects
     for key in bucket.objects.filter(Prefix=prefix + '/'):
@@ -229,6 +260,10 @@ def command_logs_list(conn, args):
 
 
 def command_logs_upload(conn, args):
+    if not args.organization:
+        args.organization = UUID(conn.get_me()['defaultOrganizationId'])
+        logger.info('using default organization %s' % args.organization)
+
     # get all source files and perform basic sanity checking
     srcfiles = parse_glob_files(args.src)
     if not srcfiles:
@@ -239,13 +274,13 @@ def command_logs_upload(conn, args):
     del notfiles
 
     # connect to S3
-    creds = conn.get_organization_credentials(args.organization.__str__())
+    creds = conn.get_organization_credentials(args.organization)
     bucket = boto3.resource('s3', aws_access_key_id=creds['accessKeyId'],
                             aws_secret_access_key=creds['secretAccessKey'],
                             aws_session_token=creds['sessionToken'],
                             region_name=creds['bucketRegion']).Bucket(creds['bucket'])
     logger.debug('opened S3 bucket %s in %s successfully', creds['bucket'], creds['bucketRegion'])
-    uploadprefix = conn.get_organization(args.organization.__str__())['properties'][
+    uploadprefix = conn.get_organization(args.organization)['properties'][
         'bucketUploadPrefix']
 
     # determine filename prefix to use, if any
@@ -284,6 +319,27 @@ def command_logs_upload(conn, args):
                 break
             else:
                 six.reraise(*exc_info())
+
+
+def command_wl_bl(conn, args):
+    if not args.organization:
+        args.organization = UUID(conn.get_me()['defaultOrganizationId'])
+        logger.info('using default organization %s' % args.organization)
+
+    if args.id:
+        json.dump(conn._get_organization_wblist_entry(args.scope, args.organization,
+                                                      args.id), args.outfile, indent=args.indent)
+    else:
+        for alert in conn._list_organization_wblists(args.scope, args.organization):
+            try:
+                json.dump(alert, args.outfile, indent=args.indent)
+                args.outfile.write(linesep)
+            except IOError as ioe:
+                if ioe.errno == EPIPE and args.outfile == stdout:
+                    logger.debug('stdout closed, exiting...')
+                    break
+                else:
+                    six.reraise(*exc_info())
 
 
 if __name__ == "__main__":
