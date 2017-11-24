@@ -8,6 +8,8 @@ A simple client that allows idiomatic access to the
 [Niddel Magnet v2 REST API](https://api.niddel.com/v2). Uses the wonderful
 [requests](http://docs.python-requests.org/) package to perform the requests.
 
+Release history: [https://github.com/Niddel/magnet-api2-sdk-python/releases](https://github.com/Niddel/magnet-api2-sdk-python/releases)
+
 ## Configuring Credentials
 
 There are a couple of ways to let the `Connection` object know which API key to use.

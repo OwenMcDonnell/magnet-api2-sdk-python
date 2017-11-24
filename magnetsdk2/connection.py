@@ -224,7 +224,7 @@ class Connection(object):
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        response = self._request_retry("GET", path='organizations/' + organization_id)
+        response = self._request_retry("GET", path='organizations/%s' % organization_id)
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 404:
@@ -342,3 +342,67 @@ class Connection(object):
             return response.json()
         else:
             response.raise_for_status()
+
+    def _list_organization_wblists(self, scope, organization_id):
+        if not scope in ('white', 'black',):
+            raise ValueError('scope should be either white or black')
+        if not is_valid_uuid(organization_id):
+            raise ValueError("organization id should be a string in UUID format")
+
+        path = 'organizations/%s/%slists' % (organization_id, scope)
+        response = self._request_retry("GET", path=path)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 404:
+            return []
+        else:
+            response.raise_for_status()
+
+    def list_organization_whitelists(self, organization_id):
+        """
+        Lists the white list entries of an organization.
+        :param organization_id: the organization ID
+        :return: a list of dicts representing white list entries
+        """
+        return self._list_organization_wblists('white', organization_id)
+
+    def list_organization_blacklists(self, organization_id):
+        """
+        Lists the black list entries of an organization.
+        :param organization_id: the organization ID
+        :return: a list of dicts representing black list entries
+        """
+        return self._list_organization_wblists('black', organization_id)
+
+    def _get_organization_wblist_entry(self, scope, organization_id, id):
+        if not scope in ('white', 'black',):
+            raise ValueError('scope should be either white or black')
+        if not is_valid_uuid(organization_id):
+            raise ValueError("organization id should be a string in UUID format")
+        if not is_valid_uuid(organization_id):
+            raise ValueError("id should be a string in UUID format")
+
+        path = 'organizations/%s/%slists/%s' % (organization_id, scope, id)
+        response = self._request_retry("GET", path=path)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            response.raise_for_status()
+
+    def get_organization_whitelists(self, organization_id, id):
+        """
+        Retrieves the details of a the white list entry.
+        :param organization_id: the organization ID
+        :param id: the white list entry ID
+        :return: a dict representing a white list entry
+        """
+        return self._get_organization_wblist_entry('white', organization_id, id)
+
+    def get_organization_blacklists(self, organization_id, id):
+        """
+        Retrieves the details of a the black list entry.
+        :param organization_id: the organization ID
+        :param id: the black list entry ID
+        :return: a dict representing a black list entry
+        """
+        return self._get_organization_wblist_entry('black', organization_id, id)
