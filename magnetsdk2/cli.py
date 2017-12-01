@@ -16,6 +16,7 @@ from os.path import expanduser, join, basename, isfile
 from sys import stdout, stderr, exc_info
 from uuid import UUID
 
+import botocore
 import boto3
 import six
 
@@ -124,7 +125,7 @@ def main():
     logs_upload_parser = logs_subparsers.add_parser('upload', help='upload log files',
                                                     description='upload log files to the ' +
                                                                 'organization\'s upload folder')
-    logs_upload_parser.add_argument("-f", "--folder",
+    logs_upload_parser.add_argument("-f", "--folder", default='',
                                     help="sub-folder of the upload folder to send file to")
     logs_upload_parser.add_argument("-p", "--prefix", choices=['day', 'hour'],
                                     required=False,
@@ -170,6 +171,17 @@ def parse_glob_files(x):
     else:
         raise ValueError('unexpected type')
     return retval
+
+
+def boto3_object_exists(obj):
+    try:
+        obj.load()
+        return True
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return False
+        else:
+            six.reraise(*exc_info())
 
 
 def command_me(conn, args):
@@ -280,6 +292,8 @@ def command_logs_upload(conn, args):
                             aws_session_token=creds['sessionToken'],
                             region_name=creds['bucketRegion']).Bucket(creds['bucket'])
     logger.debug('opened S3 bucket %s in %s successfully', creds['bucket'], creds['bucketRegion'])
+
+    # get remote file path
     uploadprefix = conn.get_organization(args.organization)['properties'][
         'bucketUploadPrefix']
 
@@ -295,24 +309,22 @@ def command_logs_upload(conn, args):
     if sep != '/':
         uploadprefix = uploadprefix.replace('/', sep)
     for src in srcfiles:
-        dest = join(uploadprefix, slotprefix + basename(src))
+        # assemble destination S3 key with full path
+        dest = join(uploadprefix, args.folder, slotprefix + basename(src))
         if sep != '/':
             dest = dest.replace(sep, '/')
 
+        # if key doesn't already exist, upload it
         try:
             args.outfile.write(
                 'copying {0:s} to s3://{1:s}/{2:s} ...'.format(src, creds['bucket'], dest))
-        except IOError as ioe:
-            if ioe.errno == EPIPE and args.outfile == stdout:
-                logger.debug('stdout closed, exiting...')
-                break
+            obj = bucket.Object(dest)
+            if boto3_object_exists(obj):
+                args.outfile.write(' Remote file exists, skipping.')
             else:
-                six.reraise(*exc_info())
-
-        bucket.upload_file(src, dest, ExtraArgs={'ServerSideEncryption': 'AES256'})
-
-        try:
-            args.outfile.write(' Done.' + linesep)
+                obj.upload_file(src, ExtraArgs={'ServerSideEncryption': 'AES256'})
+                args.outfile.write(' Done.' + linesep)
+            del obj
         except IOError as ioe:
             if ioe.errno == EPIPE and args.outfile == stdout:
                 logger.debug('stdout closed, exiting...')
