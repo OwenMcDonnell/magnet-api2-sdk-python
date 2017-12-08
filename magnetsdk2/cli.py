@@ -50,7 +50,7 @@ def main():
     parser.add_argument("-o", "--outfile",
                         help="destination file to write to, if exists will be overwritten",
                         type=argparse.FileType('wb'), default=stdout)
-    parser.set_defaults(indent=None, parser=parser)
+    parser.set_defaults(indent=None, parser=parser, func=None)
     subparsers = parser.add_subparsers()
 
     # "me" command
@@ -142,15 +142,16 @@ def main():
         logger.setLevel(logging.INFO)
 
     # open connection and dispatch to proper function
-    try:
-        conn = Connection(profile=args.profile)
-        args.func(conn, args)
-    except Exception as e:
-        logger.debug("exception caught in processing", exc_info=True)
-        args.parser.error(e.message)
-    else:
-        if args.outfile != stdout:
-            args.outfile.close()
+    if args.func:
+        try:
+            conn = Connection(profile=args.profile)
+            args.func(conn, args)
+        except Exception as e:
+            logger.debug("exception caught in processing", exc_info=True)
+            args.parser.error(e.message)
+        else:
+            if args.outfile != stdout:
+                args.outfile.close()
 
 
 def parse_arg_date(value):
