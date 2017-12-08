@@ -16,7 +16,7 @@ def is_valid_uuid(value):
     :param value: string to validate
     :return: a boolean
     """
-    return isinstance(value, UUID) or validators.uuid.uuid(value)
+    return isinstance(value, UUID) or validators.uuid(value)
 
 
 def is_valid_uri(value):
@@ -24,7 +24,7 @@ def is_valid_uri(value):
     :param value: string to validate
     :return: a boolean
     """
-    return isinstance(value, six.string_types) and validators.url.url(value)
+    return isinstance(value, six.string_types) and validators.url(value)
 
 
 def is_valid_port(value):
