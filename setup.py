@@ -24,7 +24,7 @@ setup(
     url='https://github.com/niddel/magnet-api2-sdk-python/',
     license='Apache Software License',
     install_requires=['requests>=2.12.5,<3', 'six>=1.10,<2', 'iso8601>=0.1.12,<1',
-                      'rfc3987>=1.3.7,<2', 'boto3>=1.4.5,<2'],
+                      'validators>=0.12.0,<1', 'boto3>=1.4.5,<2'],
     tests_require=['pytest>=3.3,<4'],
     setup_requires=['pytest-runner>=3,<4'],
     packages=['magnetsdk2'],
