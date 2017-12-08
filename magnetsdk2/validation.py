@@ -3,16 +3,12 @@
 This module implements basic validation and conversion logic for API data.
 """
 import datetime
-import re
 from collections import Iterable
 from uuid import UUID
 
 import iso8601
-import rfc3987
+import validators
 import six
-
-_UUID_REGEX = re.compile(
-    "(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
 def is_valid_uuid(value):
@@ -20,8 +16,7 @@ def is_valid_uuid(value):
     :param value: string to validate
     :return: a boolean
     """
-    return isinstance(value, UUID) or \
-           (isinstance(value, six.string_types) and _UUID_REGEX.match(value))
+    return isinstance(value, UUID) or validators.uuid.uuid(value)
 
 
 def is_valid_uri(value):
@@ -29,7 +24,7 @@ def is_valid_uri(value):
     :param value: string to validate
     :return: a boolean
     """
-    return isinstance(value, six.string_types) and rfc3987.match(value, 'URI')
+    return isinstance(value, six.string_types) and validators.url.url(value)
 
 
 def is_valid_port(value):
