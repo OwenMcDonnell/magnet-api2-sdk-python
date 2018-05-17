@@ -6,6 +6,7 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
+import json
 
 import six
 from requests import request
@@ -14,7 +15,7 @@ from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-    is_valid_alert_sortBy, is_valid_alert_status, parse_date
+    is_valid_alert_sortBy, is_valid_alert_status, parse_date, is_valid_alert_createdAt
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -263,54 +264,46 @@ class Connection(object):
         else:
             response.raise_for_status()
 
-    def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None,
-                                 sortBy="logDate", status=None):
+
+    def iter_organization_alerts(self, organization_id, createdAt=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
-        :param fromDate: only list alerts with dates >= this parameter
-        :param toDate: only list alerts with dates <= this parameter
-        :param sortBy: one of 'logDate' or 'batchDate', controls which date field fromDate and
-        toDate apply to
-        :param status: a list or set containing one or more of 'new', 'under_investigation',
-        'rejected', 'resolved'
+        :param createdAt: a datetime ISO 8601 (`yyyy-MM-dd'T'HH:mm:ss'Z'`)
         :return: an iterator over the decoded JSON objects that represent alerts.
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        if not is_valid_alert_sortBy(sortBy):
-            raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
-        if status is not None and not is_valid_alert_status(status):
-            raise ValueError(
-                "status must be an iterable with one or more of 'new', 'under_investigation', " +
-                "'rejected' or 'resolved'")
+        if not is_valid_alert_createdAt(createdAt):
+            raise ValueError("createdAt must be a datetime ISO 8601 ('yyyy-MM-dd'T'HH:mm:ss'Z')")
 
         # loop over alert pages and yield them
-        params = {
-            'page': 1,
-            'size': _PAGE_SIZE,
-            'sortBy': sortBy
-        }
-        if fromDate:
-            params['fromDate'] = parse_date(fromDate)
-        if toDate:
-            params['toDate'] = parse_date(toDate)
-        if status:
-            params['status'] = status
+        params = {'size': _PAGE_SIZE}
+
+        if createdAt:
+            params['createdAt'] = str(createdAt + 'T00:00:00Z')
 
         while True:
-            response = self._request_retry("GET", path='organizations/%s/alerts' % organization_id,
+            
+            response = self._request_retry("GET", path='organizations/%s/alerts/timeline' % organization_id,
                                            params=params)
+
             if response.status_code == 200:
                 alert_list = response.json()
+                # Get the newest createdAt and update params for the next search
+                # The first item returned by the API is always the newest date
+                params['createdAt'] = alert_list[0]['createdAt']
+
                 for alert in alert_list:
                     yield alert
+                
                 if len(alert_list) < _PAGE_SIZE:
                     return
+
             elif response.status_code == 404:
                 return
             else:
                 response.raise_for_status()
-            params['page'] += 1
+
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.

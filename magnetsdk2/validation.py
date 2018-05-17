@@ -44,6 +44,19 @@ def is_valid_alert_sortBy(value):
     return isinstance(value, six.string_types) and value in ('logDate', 'batchDate')
 
 
+def is_valid_alert_createdAt(value):
+    """Validates if a value is a valid ISO 8601 datetime string with an alert createdAt parameter 
+    value as per the Magnet API v2 specification.
+    :param value: string to validate
+    :return: a boolean
+    """
+    try:
+        value = iso8601.parse_date(value)
+        return True
+    except:
+        return False
+
+
 def is_valid_alert_status(value):
     """Validates if a value is a valid string with an alert status value as per the Magnet API v2
     specification.
@@ -73,3 +86,5 @@ def parse_date(value):
         return value.isoformat()
     else:
         raise ValueError('date must be in ISO format: ' + repr(value))
+
+    
