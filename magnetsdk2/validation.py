@@ -86,5 +86,3 @@ def parse_date(value):
         return value.isoformat()
     else:
         raise ValueError('date must be in ISO format: ' + repr(value))
-
-    

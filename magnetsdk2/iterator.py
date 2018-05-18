@@ -42,7 +42,7 @@ class PersistenceEntry(object):
     @property
     def latest_alert_ids(self):
         """A tuple of string in UUID format indicating the alert ID and a 
-        string in DateTime UTC forma indicating the alert created date."""
+        string in DateTime UTC format indicating the alert created date."""
         return self._latest_alert_ids
 
     @latest_alert_ids.setter
@@ -170,7 +170,7 @@ class AbstractPersistentAlertIterator(Iterator):
         else:
             _start_date = self._start_date
 
-        # if candidate is older or equal, we are done
+        # if candidate is older, we are done
         if _start_date < self.persistence_entry.latest_alert_date:
             print("INFO: Start date '"+ str(_start_date) +"' is older than latest execution date '"+ 
                 self.persistence_entry.latest_alert_date +
@@ -178,7 +178,7 @@ class AbstractPersistentAlertIterator(Iterator):
             return
 
         # add any alerts on the candidate date we haven't processed yet to the cache
-        for alert in self._connection.iter_organization_alerts(
+        for alert in self._connection.iter_organization_alerts_timeline(
             organization_id=self._persistence_entry.organization_id, createdAt=_start_date):
 
             if alert['id'] not in [x[0] for x in self._persistence_entry.latest_alert_ids]:
@@ -236,7 +236,7 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
             with open(self._filename, 'r') as f:
                 pe = json.load(f)
 
-                """Once 'PersistenceEntry' expects alerts a set of tuples, it is required to 
+                """Once 'PersistenceEntry' expects alerts as a set of tuples, it is required to 
                 convert it from a dictionary and expand by unique 'created at' datetime."""
                 alert_input = set()
                 for createdAt, alert in pe['latest_alert_ids'].iteritems():

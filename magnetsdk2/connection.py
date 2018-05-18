@@ -264,8 +264,56 @@ class Connection(object):
         else:
             response.raise_for_status()
 
+    def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None,
+                                 sortBy="logDate", status=None):
+        """ Generator that allows iteration over an organization's alerts, with optional filters.
+        :param organization_id: string with the UUID-style unique ID of the organization
+        :param fromDate: only list alerts with dates >= this parameter
+        :param toDate: only list alerts with dates <= this parameter
+        :param sortBy: one of 'logDate' or 'batchDate', controls which date field fromDate and
+        toDate apply to
+        :param status: a list or set containing one or more of 'new', 'under_investigation',
+        'rejected', 'resolved'
+        :return: an iterator over the decoded JSON objects that represent alerts.
+        """
+        if not is_valid_uuid(organization_id):
+            raise ValueError("organization id should be a string in UUID format")
+        if not is_valid_alert_sortBy(sortBy):
+            raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
+        if status is not None and not is_valid_alert_status(status):
+            raise ValueError(
+                "status must be an iterable with one or more of 'new', 'under_investigation', " +
+                "'rejected' or 'resolved'")
 
-    def iter_organization_alerts(self, organization_id, createdAt=None):
+        # loop over alert pages and yield them
+        params = {
+            'page': 1,
+            'size': _PAGE_SIZE,
+            'sortBy': sortBy
+        }
+        if fromDate:
+            params['fromDate'] = parse_date(fromDate)
+        if toDate:
+            params['toDate'] = parse_date(toDate)
+        if status:
+            params['status'] = status
+
+        while True:
+            response = self._request_retry("GET", path='organizations/%s/alerts' % organization_id,
+                                           params=params)
+            if response.status_code == 200:
+                alert_list = response.json()
+                for alert in alert_list:
+                    yield alert
+                if len(alert_list) < _PAGE_SIZE:
+                    return
+            elif response.status_code == 404:
+                return
+            else:
+                response.raise_for_status()
+            params['page'] += 1
+
+    def iter_organization_alerts_timeline(self, organization_id, createdAt=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param createdAt: a datetime ISO 8601 (`yyyy-MM-dd'T'HH:mm:ss'Z'`)
