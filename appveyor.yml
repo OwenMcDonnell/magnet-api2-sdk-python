@@ -23,10 +23,10 @@ environment:
       PYTHON: "python3"
 
 before_build:
-  - cmd: "set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%"
+  - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
-  - sh: "apt update; apt -y install $PYTHON"
-  - sh: "ln -s `which $PYTHON` /usr/bin/python"
+  - sh: apt update; apt -y install $PYTHON
+  - sh: ln -s `which $PYTHON` /usr/bin/python
 
 install:
   # We need wheel installed to build wheels
