@@ -32,7 +32,9 @@ before_build:
     - sh: sudo ln -s `which $PYTHON` /usr/bin/python
 
 install:
-    - "python -m pip install wheel setuptools"
+    - cmd: python -m pip install wheel setuptools
+
+    - sh: sudo python -m pip install wheel setuptools
 
 build: off
 
