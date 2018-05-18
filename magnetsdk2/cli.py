@@ -216,7 +216,7 @@ def command_alerts(conn, args):
                                                organization_id=str(args.organization),
                                                start_date=args.start)
     else:
-        iterator = conn.iter_organization_alerts(organization_id=args.organization,
+        iterator = conn.iter_organization_alerts_timeline(organization_id=args.organization,
                                                  createdAt=args.start)
 
     if args.outfile != stdout and args.format == 'cef':
