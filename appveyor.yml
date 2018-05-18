@@ -19,13 +19,15 @@ environment:
       PYTHON: "C:\\Python36-x64"
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
       PYTHON: "python2.7"
+      PYTHON_PIP: "python-pip"
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
       PYTHON: "python3"
+      PYTHON_PIP: "python3-pip"
 
 before_build:
   - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
-  - sh: apt update; apt -y install $PYTHON
+  - sh: apt update; apt -y install $PYTHON $PYTHON_PIP
   - sh: ln -s `which $PYTHON` /usr/bin/python
 
 install:
