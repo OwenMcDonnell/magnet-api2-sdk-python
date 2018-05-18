@@ -1,61 +1,61 @@
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python27"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python34"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python35"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python36"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python27-x64"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python34-x64"
-      DISTUTILS_USE_SDK: "1"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python35-x64"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      PYTHON: "C:\\Python36-x64"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
-      PYTHON: "python2.7"
-      PYTHON_PIP: "python-pip"
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
-      PYTHON: "python3"
-      PYTHON_PIP: "python3-pip"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+        PYTHON: "python2.7"
+        PYTHON_PIP: "python-pip"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+        PYTHON: "python3"
+        PYTHON_PIP: "python3-pip"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python27"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python34"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python35"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python36"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python27-x64"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python34-x64"
+        DISTUTILS_USE_SDK: "1"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python35-x64"
+      - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+        PYTHON: "C:\\Python36-x64"
 
 before_build:
-  - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+    - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
-  - sh: apt update; apt -y install $PYTHON $PYTHON_PIP
-  - sh: ln -s `which $PYTHON` /usr/bin/python
+    - sh: sudo apt update
+    - sh: sudo apt -y install $PYTHON $PYTHON_PIP
+    - sh: sudo ln -s `which $PYTHON` /usr/bin/python
 
 install:
-  # We need wheel installed to build wheels
-  - "python -m pip install wheel setuptools"
+    - "python -m pip install wheel setuptools"
 
 build: off
 
 test_script:
-  # Put your test command here.
-  # If you don't need to build C extensions on 64-bit Python 3.3 or 3.4,
-  # you can remove "build.cmd" from the front of the command, as it's
-  # only needed to support those cases.
-  # Note that you must use the environment variable %PYTHON% to refer to
-  # the interpreter you're using - Appveyor does not do anything special
-  # to put the Python version you want to use on PATH.
-  - "python setup.py test"
+    # Put your test command here.
+    # If you don't need to build C extensions on 64-bit Python 3.3 or 3.4,
+    # you can remove "build.cmd" from the front of the command, as it's
+    # only needed to support those cases.
+    # Note that you must use the environment variable %PYTHON% to refer to
+    # the interpreter you're using - Appveyor does not do anything special
+    # to put the Python version you want to use on PATH.
+    - "python setup.py test"
 
 after_test:
-  # This step builds your wheels.
-  # Again, you only need build.cmd if you're building C extensions for
-  # 64-bit Python 3.3/3.4. And you need to use %PYTHON% to get the correct
-  # interpreter
-  - cmd: "python setup.py bdist_wininst --bitmap logo.bmp"
+    # This step builds your wheels.
+    # Again, you only need build.cmd if you're building C extensions for
+    # 64-bit Python 3.3/3.4. And you need to use %PYTHON% to get the correct
+    # interpreter
+    - cmd: "python setup.py bdist_wininst --bitmap logo.bmp"
 
 artifacts:
-  # bdist_wheel puts your built wheel in the dist directory
-  - path: dist\*
+    # bdist_wheel puts your built wheel in the dist directory
+    - path: dist\*
 
 #on_success:
 #  You can use this step to upload your artifacts to a public website.
