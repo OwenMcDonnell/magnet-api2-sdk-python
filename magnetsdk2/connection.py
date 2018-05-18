@@ -289,6 +289,9 @@ class Connection(object):
 
             if response.status_code == 200:
                 alert_list = response.json()
+                if not alert_list:
+                    print("INFO: No alerts found for '"+ str(createdAt) +"'")
+                    return
                 # Get the newest createdAt and update params for the next search
                 # The first item returned by the API is always the newest date
                 params['createdAt'] = alert_list[0]['createdAt']

@@ -3,7 +3,7 @@
 This module implements the CLI tool 'niddel' that can be used to interact with the Niddel Magnet
 v2 API using magnetsdk2.
 """
-import ipdb
+
 import argparse
 import json
 import logging
@@ -212,9 +212,8 @@ def command_alerts(conn, args):
         logger.info('using default organization %s' % args.organization)
 
     if args.persist:
-        ipdb.set_trace()
         iterator = FilePersistentAlertIterator(filename=args.persist, connection=conn,
-                                               organization_id=args.organization,
+                                               organization_id=str(args.organization),
                                                start_date=args.start)
     else:
         iterator = conn.iter_organization_alerts(organization_id=args.organization,

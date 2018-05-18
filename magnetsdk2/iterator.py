@@ -13,7 +13,7 @@ from os.path import isfile
 from six import python_2_unicode_compatible
 
 from magnetsdk2.connection import Connection
-from magnetsdk2.validation import is_valid_uuid, parse_date
+from magnetsdk2.validation import is_valid_uuid, parse_date, is_valid_alert_createdAt
 
 
 @python_2_unicode_compatible
@@ -41,8 +41,8 @@ class PersistenceEntry(object):
 
     @property
     def latest_alert_ids(self):
-        """A set of string in UUID format that indicate which alerts on the latest batch date
-        have already been processed."""
+        """A tuple of string in UUID format indicating the alert ID and a 
+        string in DateTime UTC forma indicating the alert created date."""
         return self._latest_alert_ids
 
     @latest_alert_ids.setter
@@ -51,19 +51,22 @@ class PersistenceEntry(object):
             self._latest_alert_ids = set()
         else:
             if not isinstance(latest_alert_ids, Iterable):
-                raise ValueError('latest alert IDs must be iterable')
-            if latest_alert_ids and not all(is_valid_uuid(x) for x in latest_alert_ids):
-                raise ValueError('latest alert IDs must only contain UUIDs')
-            self._latest_alert_ids = {x for x in latest_alert_ids}
+                raise ValueError("iterator.latest_alert_ids.setter': latest alert IDs must be iterable")
+            if latest_alert_ids and not all(is_valid_uuid(x[0]) for x in latest_alert_ids):
+                raise ValueError("iterator.latest_alert_ids.setter': latest alert IDs must only contain UUIDs")
+            self._latest_alert_ids = [x for x in latest_alert_ids]
 
     def add_alert_id(self, alert_id):
-        if not is_valid_uuid(alert_id):
-            raise ValueError("invalid alert ID")
+        if not is_valid_uuid(alert_id[0]):
+            raise ValueError("'iterator.add_alert_id': invalid alert ID")
+        if not is_valid_alert_createdAt(alert_id[1]):
+            raise ValueError("'iterator.add_alert_id': invalid alert createdAt")
         self._latest_alert_ids.add(alert_id)
 
-    def __init__(self, organization_id, latest_alert_date=None, latest_alert_ids=None):
+    def __init__(self, organization_id, latest_alert_date=None, 
+                latest_alert_ids=None):
         if not is_valid_uuid(organization_id):
-            raise ValueError('invalid organization ID')
+            raise ValueError("iterator.__init__': invalid organization ID")
         self._organization_id = organization_id
 
         self._latest_alert_ids = set()
@@ -169,13 +172,18 @@ class AbstractPersistentAlertIterator(Iterator):
 
         # if candidate is older or equal, we are done
         if _start_date < self.persistence_entry.latest_alert_date:
+            print("INFO: Start date '"+ str(_start_date) +"' is older than latest execution date '"+ 
+                self.persistence_entry.latest_alert_date +
+                "'. If you still need older alerts, delete the persistence file '"+ self._filename +"'")
             return
 
         # add any alerts on the candidate date we haven't processed yet to the cache
         for alert in self._connection.iter_organization_alerts(
             organization_id=self._persistence_entry.organization_id, createdAt=_start_date):
-            if alert['id'] not in self._persistence_entry.latest_alert_ids:
+
+            if alert['id'] not in [x[0] for x in self._persistence_entry.latest_alert_ids]:
                 self._alerts.append(alert)
+
             # if alert cache is empty, we are finished for now
             if not self._alerts:
                 return
@@ -193,8 +201,11 @@ class AbstractPersistentAlertIterator(Iterator):
 
         if self._alerts:
             alert = self._alerts.pop()
-            self._persistence_entry.latest_alert_date = parse_date(alert['createdAt'])
-            self._persistence_entry.add_alert_id(alert['id'])
+            # Updating latest_alert_date
+            if self._persistence_entry.latest_alert_date < parse_date(alert['createdAt']):
+                self._persistence_entry.latest_alert_date = parse_date(alert['createdAt'])
+            # Passing alert_ID and alert_createdAt as a tuple
+            self._persistence_entry.add_alert_id((alert['id'], alert['createdAt']))
             return alert
         else:
             raise StopIteration
@@ -224,19 +235,32 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
         if isfile(self._filename):
             with open(self._filename, 'r') as f:
                 pe = json.load(f)
+
+                """Once 'PersistenceEntry' expects alerts a set of tuples, it is required to 
+                convert it from a dictionary and expand by unique 'created at' datetime."""
+                alert_input = set()
+                for createdAt, alert in pe['latest_alert_ids'].iteritems():
+                    for alert_id in alert:
+                        alert_input.add((alert_id, createdAt))
+                    
                 return PersistenceEntry(pe['organization_id'], pe['latest_alert_date'],
-                                        pe['latest_alert_ids'])
+                                        alert_input)
         else:
             return None
 
     def _save(self):
+        """Once 'self._persistence_entry.latest_alert_ids' is a tuple, it is required to convert it to a
+        dictionary aggregated by unique 'created at' datetime."""
+        alert_output = dict.fromkeys(set([x[1] for x in self._persistence_entry.latest_alert_ids]), [])
+        for alert, createdAt in dict.fromkeys(self._persistence_entry.latest_alert_ids):
+            alert_output[createdAt].append(alert)
+
         pe = {
             'organization_id': str(self.persistence_entry.organization_id),
             'latest_alert_date': self.persistence_entry.latest_alert_date,
-            'latest_alert_ids': [x for x in self.persistence_entry.latest_alert_ids]
+            'latest_alert_ids': alert_output
         }
         with open(self._filename, 'w') as f:
-            import ipdb
             json.dump(pe, f)
 
     def __str__(self):
