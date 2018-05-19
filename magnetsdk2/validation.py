@@ -50,11 +50,14 @@ def is_valid_alert_createdAt(value):
     :param value: string to validate
     :return: a boolean
     """
-    try:
-        value = iso8601.parse_date(value)
+    if not value:
         return True
-    except:
-        return False
+    else:
+        try:
+            value = iso8601.parse_date(value)
+            return True
+        except:
+            return False
 
 
 def is_valid_alert_status(value):

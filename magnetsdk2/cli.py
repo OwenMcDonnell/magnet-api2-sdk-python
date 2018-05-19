@@ -81,7 +81,7 @@ def main():
                                     "that haven't been seen before are part of the output")
     alerts_parser.add_argument("-f", "--format", choices=['json', 'cef'], default='json',
                                help="format in which to output alerts")
-    alerts_parser.set_defaults(func=command_alerts, start=datetime.now(UTC).strftime("%Y-%m-%d"), 
+    alerts_parser.set_defaults(func=command_alerts, start=None, 
                                 persist=None, parser=alerts_parser)
 
     # "whitelists" and "blacklists" commands

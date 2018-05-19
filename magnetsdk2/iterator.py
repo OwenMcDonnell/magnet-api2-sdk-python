@@ -104,10 +104,11 @@ class AbstractPersistentAlertIterator(Iterator):
 
         self._execution_date = parse_date(datetime.utcnow().isoformat())
 
-        if start_date is  None:
-            self._start_date = self._execution_date
-        else:
+        if start_date:
             self._start_date = parse_date(start_date)
+        else:
+            self._start_date = start_date
+
         self._persistence_entry = None
         self._alerts = []
 
@@ -164,22 +165,16 @@ class AbstractPersistentAlertIterator(Iterator):
         if self._alerts:
             return
 
-        # get the candidate dates in order, and discard the ones we've already fully processed
-        if self._start_date == None:
-            _start_date = self._execution_date
-        else:
-            _start_date = self._start_date
-
         # if candidate is older, we are done
-        if _start_date < self.persistence_entry.latest_alert_date:
-            print("INFO: Start date '"+ str(_start_date) +"' is older than latest execution date '"+ 
+        if self._start_date < self.persistence_entry.latest_alert_date:
+            print("INFO: Start date '"+ str(self._start_date) +"' is older than latest execution date '"+ 
                 self.persistence_entry.latest_alert_date +
                 "'. If you still need older alerts, delete the persistence file '"+ self._filename +"'")
             return
 
         # add any alerts on the candidate date we haven't processed yet to the cache
         for alert in self._connection.iter_organization_alerts_timeline(
-            organization_id=self._persistence_entry.organization_id, createdAt=_start_date):
+            organization_id=self._persistence_entry.organization_id, createdAt=self._start_date):
 
             if alert['id'] not in [x[0] for x in self._persistence_entry.latest_alert_ids]:
                 self._alerts.append(alert)

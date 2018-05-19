@@ -3,6 +3,7 @@
 This module implements the Connection class, which is used for low-level interaction with the
 Niddel Magnet v2 API.
 """
+
 import logging
 import os
 import sys
