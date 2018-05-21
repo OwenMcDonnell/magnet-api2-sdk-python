@@ -3,7 +3,6 @@ import datetime
 import six
 import iso8601
 
-
 class UTC(datetime.tzinfo):
     """tzinfo derived concrete class for UTC"""
     _offset = datetime.timedelta(0)
