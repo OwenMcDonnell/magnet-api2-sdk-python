@@ -1,0 +1,10 @@
+[
+  "tests/test_alerts.py::test_connection_org", 
+  "tests/test_alerts.py::test_connection_alerts", 
+  "tests/test_alerts.py::test_connection_alerts_persistence", 
+  "tests/test_cef.py::test_escape_header_entry", 
+  "tests/test_cef.py::test_header", 
+  "tests/test_cef.py::test_escape_extension_value", 
+  "tests/test_cef.py::test_extension", 
+  "tests/test_cef.py::test_timestamp"
+]
