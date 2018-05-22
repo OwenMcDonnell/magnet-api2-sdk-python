@@ -16,7 +16,7 @@ from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-    is_valid_alert_sortBy, is_valid_alert_status, parse_date, is_valid_alert_createdAt
+    is_valid_alert_sortBy, is_valid_alert_status, parse_date
 
 from magnetsdk2.connection import Connection
 
@@ -31,7 +31,7 @@ class ConnectionTest(Connection):
         Demo Organization.
         :return: an iterator over the decoded JSON objects that represent organizations.
         """
-        return json.dumps(
+        """return json.dumps(
             {u'status': u'suspended', \
             u'name': u'Demo Organization', \
             u'roles': [u'admin'], \
@@ -40,7 +40,10 @@ class ConnectionTest(Connection):
             u'properties': {u'bucketRegion': u'us-east-1', \
             u'bucketReportPrefix': u'reports', \
             u'bucket': u'niddel-149ab4da-ab74-11e6-9671-0a7e67dda05f', \
-            u'maxWhitelists': 500, u'bucketUploadPrefix': u'upload', u'maxBlacklists': 500}})
+            u'maxWhitelists': 500, u'bucketUploadPrefix': u'upload', u'maxBlacklists': 500}})"""
+
+        org_ids = os.listdir('./tests/data_test/')
+        return [x.replace('.json', '') for x in org_ids]
 
     def get_organization(self, organization_id):
         """ Retrieves detailed data from an organization this API key has accessed to based on its
@@ -55,11 +58,11 @@ class ConnectionTest(Connection):
             {u'status': u'suspended', \
             u'name': u'Demo Organization', \
             u'roles': [u'admin'], \
-            u'id': u'149ab4da-ab74-11e6-9671-0a7e67dda05f', \
+            u'id': str(organization_id), \
             u'nickname': u'NiddelDemo', \
             u'properties': {u'bucketRegion': u'us-east-1', \
             u'bucketReportPrefix': u'reports', \
-            u'bucket': u'niddel-149ab4da-ab74-11e6-9671-0a7e67dda05f', \
+            u'bucket': u'niddel-' + str(organization_id), \
             u'maxWhitelists': 500, u'bucketUploadPrefix': u'upload', u'maxBlacklists': 500}})
 
     def iter_organization_alerts(self, organization_id, fromDate=None, toDate=None,
@@ -77,53 +80,30 @@ class ConnectionTest(Connection):
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
 
-        with open('./tests/' + organization_id + '.json', 'r') as f:
+        with open('./tests/data_test/' + organization_id + '.json', 'r') as f:
             for line in f:
                 yield json.loads(line.replace('\n', ''))
         
-    def iter_organization_alerts_timeline(self, organization_id, createdAt=None):
+    def iter_organization_alerts_timeline(self, organization_id, alert_id=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
-        :param createdAt: a datetime ISO 8601 (`yyyy-MM-dd'T'HH:mm:ss'Z'`)
         :return: an iterator over the decoded JSON objects that represent alerts.
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        if not is_valid_alert_createdAt(createdAt):
-            raise ValueError("createdAt must be a datetime ISO 8601 ('yyyy-MM-dd'T'HH:mm:ss'Z')")
+        if not is_valid_uuid(alert_id):
+            raise ValueError("alert id should be a string in UUID format")
 
         alert_list = []
-        with open('./tests/' + organization_id + '.json', 'r') as f:
+        with open('./tests/data_test/' + organization_id + '.json', 'r') as f:
             for line in f:
                 alert_list.append(json.loads(line.replace('\n', '')))
 
         if alert_list:
             for alert in alert_list:
-                    if alert['createdAt'] > createdAt:
-                        yield alert
+                yield alert
         else:
             return
-
-    def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
-        """ Lists all log or batch dates for which alerts exist on the organization.
-        :param organization_id: string with the UUID-style unique ID of the organization
-        :param sortBy: one of 'logDate' or 'batchDate', controls which date field to return
-        :return: a set of ISO 8601 dates for which alerts exist
-        """
-        if not is_valid_uuid(organization_id):
-            raise ValueError("organization id should be a string in UUID format")
-        if not is_valid_alert_sortBy(sortBy):
-            raise ValueError("sortBy must be either 'logDate' or 'batchDate'")
-
-        response = self._request_retry("GET",
-                                       path='organizations/%s/alerts/dates' % organization_id,
-                                       params={'sortBy': sortBy})
-        if response.status_code == 200:
-            return set(response.json())
-        elif response.status_code == 404:
-            return set()
-        else:
-            response.raise_for_status()
 
     def get_me(self):
         """Queries the API about the user that owns the API key in use.
