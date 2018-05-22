@@ -10,6 +10,7 @@ import iso8601
 import validators
 import six
 
+from time import UTC
 
 def is_valid_uuid(value):
     """Validates if a value is a string representation of a UUID.
@@ -44,22 +45,6 @@ def is_valid_alert_sortBy(value):
     return isinstance(value, six.string_types) and value in ('logDate', 'batchDate')
 
 
-def is_valid_alert_createdAt(value):
-    """Validates if a value is a valid ISO 8601 datetime string with an alert createdAt parameter 
-    value as per the Magnet API v2 specification.
-    :param value: string to validate
-    :return: a boolean
-    """
-    if not value:
-        return True
-    else:
-        try:
-            value = iso8601.parse_date(value)
-            return True
-        except:
-            return False
-
-
 def is_valid_alert_status(value):
     """Validates if a value is a valid string with an alert status value as per the Magnet API v2
     specification.
@@ -76,10 +61,10 @@ def is_valid_alert_status(value):
 
 
 def parse_date(value):
-    """Extracts a datetime.date object from a string containing an ISO 8601 date, a
-    datetime.datetime object or a datetime.date object.
+    """Validates and extracts a string containing an ISO 8601 date from either a string,
+    a datetime.datetime object or a datetime.date object.
     :param value: string to parse, datetime.date or datetime.datetime instance
-    :return: a datetime.date instance
+    :return: a string with the date in ISO 8601 format (YYYY-MM-DD)
     """
     if isinstance(value, six.string_types):
         return iso8601.parse_date(value).date().isoformat()
@@ -89,3 +74,19 @@ def parse_date(value):
         return value.isoformat()
     else:
         raise ValueError('date must be in ISO format: ' + repr(value))
+
+
+def parse_timestamp(value):
+    """Validates and extracts a string containing an ISO 8601 timestamp from either
+    a string, a datetime.datetime object or a datetime.date object.
+    :param value: string to parse, datetime.date or datetime.datetime instance
+    :return: a string with the date in ISO 8601 format (YYYY-MM-DD)
+    """
+    if isinstance(value, six.string_types):
+        value = iso8601.parse_date(value)
+    if isinstance(value, datetime.datetime):
+        return value.astimezone(UTC).isoformat().replace('+00:00', 'Z')
+    elif isinstance(value, datetime.date):
+        return value.isoformat() + "T00:00:00Z"
+    else:
+        raise ValueError('timestamp must be in ISO format: ' + repr(value))

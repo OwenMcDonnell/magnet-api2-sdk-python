@@ -49,7 +49,7 @@ test_script:
     - cmd: appveyor-retry python setup.py test
 
     - sh: python setup.py test
-    
+
 after_test:
     # This step builds your wheels.
     # Again, you only need build.cmd if you're building C extensions for

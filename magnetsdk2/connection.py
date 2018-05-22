@@ -7,7 +7,6 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
-import json
 
 import six
 from requests import request
@@ -16,7 +15,7 @@ from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-    is_valid_alert_sortBy, is_valid_alert_status, parse_date, is_valid_alert_createdAt
+    is_valid_alert_sortBy, is_valid_alert_status, parse_date
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -314,48 +313,39 @@ class Connection(object):
                 response.raise_for_status()
             params['page'] += 1
 
-    def iter_organization_alerts_timeline(self, organization_id, createdAt=None):
-        """ Generator that allows iteration over an organization's alerts, with optional filters.
+    def iter_organization_alerts_timeline(self, organization_id, alert_id=None):
+        """ Generator that allows iteration over the timeline of alerts based on the
+        timestamp of their creation.
         :param organization_id: string with the UUID-style unique ID of the organization
-        :param createdAt: a datetime ISO 8601 (`yyyy-MM-dd'T'HH:mm:ss'Z'`)
-        :return: an iterator over the decoded JSON objects that represent alerts.
+        :param alert_id: string with the UUID-style unique ID of the last alert already seen,
+        so the results will start at the next alert after this one. If omitted, starts
+        at the first alert ever created.
+        :return: a iterator over the decoded JSON objects that represent alerts.
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        if not is_valid_alert_createdAt(createdAt):
-            raise ValueError("createdAt must be a datetime ISO 8601 ('yyyy-MM-dd'T'HH:mm:ss'Z')")
 
         # loop over alert pages and yield them
-        params = {'size': _PAGE_SIZE}
-
-        if createdAt:
-            params['createdAt'] = str(createdAt + 'T00:00:00Z')
+        params = {}
+        if alert_id:
+            if not is_valid_uuid(alert_id):
+                raise ValueError("alert id should be a string in UUID format")
+            params['alertId'] = str(alert_id)
 
         while True:
-            
-            response = self._request_retry("GET", path='organizations/%s/alerts/timeline' % organization_id,
+            response = self._request_retry("GET",
+                                           path='organizations/%s/alerts/timeline' % organization_id,
                                            params=params)
-
             if response.status_code == 200:
                 alert_list = response.json()
                 if not alert_list:
-                    print("INFO: No alerts found for '"+ str(createdAt) +"'")
                     return
-                # Get the newest createdAt and update params for the next search
-                # The first item returned by the API is always the newest date
-                params['createdAt'] = alert_list[0]['createdAt']
 
                 for alert in alert_list:
+                    params['alert_id'] = alert['id']
                     yield alert
-                
-                if len(alert_list) < _PAGE_SIZE:
-                    return
-
-            elif response.status_code == 404:
-                return
             else:
                 response.raise_for_status()
-
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.
