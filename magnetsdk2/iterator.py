@@ -161,7 +161,8 @@ class AbstractPersistentAlertIterator(Iterator):
 
         if self._alerts:
             alert = self._alerts.pop()
-            self._persistence_entry.update_alert_id(alert['id'])
+            if self._persistence_entry._latest_alert_id:
+                self._persistence_entry.update_alert_id(alert['id'])
             return alert
         else:
             raise StopIteration

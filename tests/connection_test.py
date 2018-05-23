@@ -91,13 +91,20 @@ class ConnectionTest(Connection):
         """
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-        if not is_valid_uuid(alert_id):
-            raise ValueError("alert id should be a string in UUID format")
+        if alert_id:
+            if not is_valid_uuid(alert_id):
+                raise ValueError("alert id should be a string in UUID format")
 
         alert_list = []
         with open('./tests/data_test/' + organization_id + '.json', 'r') as f:
             for line in f:
                 alert_list.append(json.loads(line.replace('\n', '')))
+        
+        #import ipdb
+        #ipdb.set_trace()
+
+        if alert_id in [x['id'] for x in alert_list]:
+            return
 
         if alert_list:
             for alert in alert_list:
