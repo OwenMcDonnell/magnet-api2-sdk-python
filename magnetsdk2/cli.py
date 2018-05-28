@@ -213,11 +213,10 @@ def command_alerts(conn, args):
 
     if args.persist:
         iterator = FilePersistentAlertIterator(filename=args.persist, connection=conn,
-                                               organization_id=str(args.organization),
-                                               start_date=args.start)
+                                               organization_id=str(args.organization))
     else:
-        iterator = conn.iter_organization_alerts_timeline(organization_id=args.organization,
-                                                 createdAt=args.start)
+        iterator = conn.iter_organization_alerts_stream(organization_id=args.organization,
+                                                 latest_alert_id=args.start, latest_batch_time=args.start)
 
     if args.outfile != stdout and args.format == 'cef':
         args.outfile.write(BOM_UTF8)
@@ -225,6 +224,7 @@ def command_alerts(conn, args):
     for alert in iterator:
         try:
             if args.format == 'json':
+                ipdb.set_trace()
                 json.dump(alert, args.outfile, indent=args.indent)
             elif args.format == 'cef':
                 convert_alert(args.outfile, alert, args.organization)

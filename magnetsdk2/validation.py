@@ -9,6 +9,7 @@ from uuid import UUID
 import iso8601
 import validators
 import six
+import sys
 
 from time import UTC
 
@@ -59,6 +60,14 @@ def is_valid_alert_status(value):
             return False
     return True
 
+def has_iso8601_timestamp(value):
+    format_string = '%Y-%m-%dT%H:%M:%SZ'
+    try:
+        value = datetime.datetime.strptime(value, format_string)
+        return True
+    except:
+        return False
+
 
 def parse_date(value):
     """Validates and extracts a string containing an ISO 8601 date from either a string,
@@ -67,9 +76,9 @@ def parse_date(value):
     :return: a string with the date in ISO 8601 format (YYYY-MM-DD)
     """
     if isinstance(value, six.string_types):
-        return iso8601.parse_date(value).date().isoformat()
+        return iso8601.parse_date(value).date().isoformat().replace('+00:00', 'Z')
     elif isinstance(value, datetime.datetime):
-        return value.date().isoformat()
+        return value.date().isoformat().replace('+00:00', 'Z')
     elif isinstance(value, datetime.date):
         return value.isoformat()
     else:
@@ -90,3 +99,9 @@ def parse_timestamp(value):
         return value.isoformat() + "T00:00:00Z"
     else:
         raise ValueError('timestamp must be in ISO format: ' + repr(value))
+
+def to_bytes(n, length):
+        """ Convert integer to 4 bytes return (same as to_bytes() as Python 3)"""
+        h = '%x' % n
+        s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+        return s[::-1] if sys.byteorder == 'little' else s

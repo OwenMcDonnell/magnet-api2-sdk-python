@@ -34,7 +34,7 @@ def test_connection_org():
 
 def test_connection_alerts():
 	for org_id in conn.iter_organizations():
-		for alert in conn.iter_organization_alerts_timeline(organization_id = org_id):
+		for alert in conn.iter_organization_alerts_stream(organization_id = org_id):
 			assert is_valid_uuid(alert['id'])
 
 def test_connection_alerts_persistence():

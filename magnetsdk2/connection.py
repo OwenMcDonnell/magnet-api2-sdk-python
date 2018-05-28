@@ -7,15 +7,18 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
+import base64
 
 import six
+from uuid import UUID
+import dateutil.parser as dp
 from requests import request
 from six.moves.configparser import RawConfigParser
 from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-    is_valid_alert_sortBy, is_valid_alert_status, parse_date
+    is_valid_alert_sortBy, is_valid_alert_status, parse_date, to_bytes
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -313,7 +316,33 @@ class Connection(object):
                 response.raise_for_status()
             params['page'] += 1
 
-    def iter_organization_alerts_timeline(self, organization_id, alert_id=None):
+    def get_alert_stream_cursor(self, version=1, latest_alert_id=None, latest_batch_time=None):
+        """ Function the calculate the API stream cursor based on the version, last seen
+        alert ID and batch time.
+            val b = ByteBuffer.allocate(21)
+            len 1 - b.put(1.toByte) // version
+            len 8 - b.putLong(alert.id.getMostSignificantBits)
+            len 8 - b.putLong(alert.id.getLeastSignificantBits)
+            len 4 - b.putInt(alert.batchTime.map(t => t.toSecondOfDay).getOrElse(0))
+            Base64.getUrlEncoder.encodeToString(b.array)"""
+        b_cursor = bytearray()
+        # append 1 byte for 'version'
+        b_cursor.extend(to_bytes(n=version, length=1))
+        # append 16 bytes for 'alert_id'
+        if not isinstance(latest_alert_id, UUID):
+            alert_id = UUID(latest_alert_id)
+        b_cursor.extend(alert_id.bytes)
+        # append 4 bytes for the 'latest_batch_time' seconds
+        sec = int(dp.parse(latest_batch_time).strftime('%s'))
+        b_cursor.extend(to_bytes(n=sec, length=1))
+
+        import ipdb
+        ipdb.set_trace()
+        return base64.urlsafe_b64encode(str(b_cursor))
+        #return 'AdQx_z74DUHmpe_epBJOVG0AAAAA'
+
+
+    def iter_organization_alerts_stream(self, organization_id, latest_alert_id=None, latest_batch_time=None):
         """ Generator that allows iteration over the timeline of alerts based on the
         timestamp of their creation.
         :param organization_id: string with the UUID-style unique ID of the organization
@@ -322,27 +351,35 @@ class Connection(object):
         at the first alert ever created.
         :return: a iterator over the decoded JSON objects that represent alerts.
         """
+
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
 
-        # loop over alert pages and yield them
         params = {}
-        if alert_id:
-            if not is_valid_uuid(alert_id):
-                raise ValueError("alert id should be a string in UUID format")
-            params['alertId'] = str(alert_id)
+        #import ipdb
+        #ipdb.set_trace()
+
+        if latest_alert_id and latest_batch_time:
+            params['cursor'] = self.get_alert_stream_cursor(version=1, \
+                                                            latest_alert_id=latest_alert_id, \
+                                                            latest_batch_time=latest_batch_time)
 
         while True:
             response = self._request_retry("GET",
-                                           path='organizations/%s/alerts/timeline' % organization_id,
+                                           path='organizations/%s/alerts/stream' % organization_id,
                                            params=params)
+
             if response.status_code == 200:
-                alert_list = response.json()
-                if not alert_list:
+                alert_response = response.json()
+
+                if not alert_response['paging']:
                     return
 
-                for alert in alert_list:
-                    params['alert_id'] = alert['id']
+                params['cursor'] = alert_response['paging']['cursor']
+
+                for alert in alert_response['data']:
+                    with open('fname.alerts', 'a') as f:
+                        f.write(alert['id'] + ';batchdate: ' + alert['batchDate'] + ';batchtime: ' + alert['batchTime'] + ';cursor:' + params['cursor'] + "\n")
                     yield alert
             else:
                 response.raise_for_status()
