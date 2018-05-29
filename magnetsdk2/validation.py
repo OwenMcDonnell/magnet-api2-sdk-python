@@ -3,12 +3,15 @@
 This module implements basic validation and conversion logic for API data.
 """
 import datetime
+import dateutil.parser as dp
 from collections import Iterable
 from uuid import UUID
+from time import UTC
 
 import iso8601
 import validators
 import six
+import sys
 
 
 def is_valid_uuid(value):
@@ -73,3 +76,49 @@ def parse_date(value):
         return value.isoformat()
     else:
         raise ValueError('date must be in ISO format: ' + repr(value))
+
+
+def parse_timestamp(value):
+    """Validates and extracts a string containing an ISO 8601 timestamp from either
+    a string, a datetime.datetime object or a datetime.date object.
+    :param value: string to parse, datetime.date or datetime.datetime instance
+    :return: a string with the date in ISO 8601 format (YYYY-MM-DD)
+    """
+    if isinstance(value, six.string_types):
+        value = iso8601.parse_date(value)
+    if isinstance(value, datetime.datetime):
+        return value.astimezone(UTC).isoformat().replace('+00:00', 'Z')
+    elif isinstance(value, datetime.date):
+        return value.isoformat() + "T00:00:00Z"
+    else:
+        raise ValueError('timestamp must be in ISO format: ' + repr(value))
+
+
+def has_iso8601_timestamp(value):
+    """Validates if a value is a valid ISO 8601 format with date and timestamp"""
+    format_string = '%Y-%m-%dT%H:%M:%SZ'
+    try:
+        value = datetime.datetime.strptime(value, format_string)
+        return True
+    except:
+        return False
+
+
+def to_bytes(n, length):
+        """ Convert integer to 4 bytes return (same as to_bytes() as Python 3)"""
+        h = '%x' % n
+        s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+        return s[::-1] if sys.byteorder == 'little' else s
+
+
+def to_SecondOfDay(value):
+    if "T00:00:00Z" in value:
+        return int(0)
+    else:
+        hour = int(dp.parse(value).strftime('%H'))
+        minute = int(dp.parse(value).strftime('%M'))
+        second = int(dp.parse(value).strftime('%S'))
+        total = hour *  int(60) #SECONDS_PER_HOUR
+        total += minute * int(60) #SECONDS_PER_MINUTE
+        total += second
+        return total

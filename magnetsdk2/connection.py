@@ -6,15 +6,18 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
+import base64
 
 import six
+from uuid import UUID
 from requests import request
 from six.moves.configparser import RawConfigParser
 from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-    is_valid_alert_sortBy, is_valid_alert_status, parse_date
+     is_valid_alert_sortBy, is_valid_alert_status, parse_date, to_bytes, parse_timestamp, \
+     has_iso8601_timestamp, to_SecondOfDay
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -311,6 +314,65 @@ class Connection(object):
             else:
                 response.raise_for_status()
             params['page'] += 1
+
+    def get_alert_stream_cursor(self, version=1, latest_alert_id=None, latest_batch_time=None):
+        """ Function the calculate the API stream cursor based on the version, last seen
+        alert ID and batch time."""
+        b_cursor = bytearray()
+        # append 1 byte for 'version'
+        b_cursor.extend(to_bytes(n=version, length=1))
+        # append 16 bytes for 'alert_id'
+        if not isinstance(latest_alert_id, UUID):
+            alert_id = UUID(latest_alert_id)
+        b_cursor.extend(alert_id.bytes)
+        # append 4 bytes for the 'latest_batch_time' seconds
+        b_cursor.extend(to_bytes(n=to_SecondOfDay(latest_batch_time), length=4))
+
+        return base64.urlsafe_b64encode(str(b_cursor))
+
+    def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, \
+                                                latest_alert_id=None, latest_batch_time=None):
+        """ Generator that allows iteration over an organization's alerts, with optional filters.
+        :param organization_id: string with the UUID-style unique ID of the organization
+        :param api_cursor: string with API cursor representing the latest alert ID retrived
+        :return: an iterator over the decoded JSON objects that represent alerts.
+        """
+
+        if not is_valid_uuid(organization_id):
+            raise ValueError("organization id should be a string in UUID format")
+
+        # loop over alert pages and yield them
+        params = {}
+
+        if latest_api_cursor:
+            params['cursor'] = latest_api_cursor
+
+        elif latest_alert_id and latest_batch_time:
+            if not has_iso8601_timestamp(latest_batch_time):
+                latest_batch_time = parse_timestamp(latest_batch_time)
+            params['cursor'] = self.get_alert_stream_cursor(version=1, \
+                                                            latest_alert_id=latest_alert_id, \
+                                                            latest_batch_time=latest_batch_time)
+
+        while True:
+            response = self._request_retry("GET", 
+                                        path='organizations/%s/alerts/stream' % organization_id,
+                                        params=params)
+            if response.status_code == 200:
+                alert_response = response.json()
+                if not alert_response['paging']:
+                    return
+                params['cursor'] = alert_response['paging']['cursor']
+                for alert in alert_response['data']:
+                    # If alert returned is older than current latest_batch_date, stop iteration
+                    alert_ts = alert['batchDate'] +'T'+ alert['batchTime']
+                    if alert_ts < latest_batch_time:
+                        return
+                    with open('fname.alerts', 'a') as f:
+                        f.write(alert['id'] + ';batchdate: ' + alert['batchDate'] + ';batchtime: ' + alert['batchTime'] + ';cursor:' + params['cursor'] + "\n")
+                    yield alert
+            else:
+                response.raise_for_status()
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.

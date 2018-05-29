@@ -11,7 +11,7 @@ from os.path import isfile
 from six import python_2_unicode_compatible
 
 from magnetsdk2.connection import Connection
-from magnetsdk2.validation import is_valid_uuid, parse_date
+from magnetsdk2.validation import is_valid_uuid, parse_date, parse_timestamp
 
 
 @python_2_unicode_compatible
@@ -35,7 +35,19 @@ class PersistenceEntry(object):
         if latest_batch_date is None:
             self._latest_batch_date = None
         else:
-            self._latest_batch_date = parse_date(latest_batch_date)
+            self._latest_batch_date = parse_timestamp(latest_batch_date)
+
+    @property
+    def latest_api_cursor(self):
+        """A string representing the most recent alerts that has already been processed."""
+        return self._latest_api_cursor
+
+    @latest_api_cursor.setter
+    def latest_api_cursor(self, latest_api_cursor):
+        if latest_api_cursor is None:
+            self._latest_api_cursor = None
+        else:
+            self._latest_api_cursor = latest_api_cursor
 
     @property
     def latest_alert_ids(self):
@@ -46,33 +58,42 @@ class PersistenceEntry(object):
     @latest_alert_ids.setter
     def latest_alert_ids(self, latest_alert_ids):
         if latest_alert_ids is None:
-            self._latest_alert_ids = set()
+            self._latest_alert_ids = None
         else:
+            if isinstance(latest_alert_ids, list):
+                # Get the last element of the list as being the latest persisted alert ID
+                latest_alert_ids = set(latest_alert_ids)
             if not isinstance(latest_alert_ids, Iterable):
                 raise ValueError('latest alert IDs must be iterable')
-            if latest_alert_ids and not all(is_valid_uuid(x) for x in latest_alert_ids):
+            if latest_alert_ids and not latest_alert_ids:
                 raise ValueError('latest alert IDs must only contain UUIDs')
-            self._latest_alert_ids = {x for x in latest_alert_ids}
+            # Handling old format which 'latest_alert_ids' contains multiple entries
+            if isinstance(latest_alert_ids, set):
+                self._latest_alert_ids = next(iter(latest_alert_ids))
+            else:
+                self._latest_alert_ids = latest_alert_ids
 
-    def add_alert_id(self, alert_id):
+
+    def update_alert_id(self, alert_id):
         if not is_valid_uuid(alert_id):
             raise ValueError("invalid alert ID")
-        self._latest_alert_ids.add(alert_id)
+        self._latest_alert_ids = alert_id
 
-    def __init__(self, organization_id, latest_batch_date=None, latest_alert_ids=None):
+    def __init__(self, organization_id, latest_batch_date=None, latest_alert_ids=None, latest_api_cursor=None):
         if not is_valid_uuid(organization_id):
             raise ValueError('invalid organization ID')
         self._organization_id = organization_id
-
-        self._latest_alert_ids = set()
         self._latest_batch_date = None
+        self._latest_api_cursor = None
+        self._latest_alert_ids = set()
         self.latest_batch_date = latest_batch_date
+        self.latest_api_cursor = latest_api_cursor
         self.latest_alert_ids = latest_alert_ids
 
     def __str__(self):
-        return "%s(organization_id=%s, latest_batch_date=%s, latest_alert_ids=%s)" \
+        return "%s(organization_id=%s, latest_batch_date=%s, latest_alert_ids=%s, latest_api_cursor=%s)" \
                % (self.__class__.__name__, self.organization_id, self.latest_batch_date,
-                  self.latest_alert_ids)
+                  self.latest_alert_ids, self.latest_api_cursor)
 
 
 @python_2_unicode_compatible
@@ -98,7 +119,7 @@ class AbstractPersistentAlertIterator(Iterator):
         self._organization_id = organization_id
 
         if start_date is not None:
-            self._start_date = parse_date(start_date)
+            self._start_date = parse_timestamp(start_date)
         else:
             self._start_date = None
         self._persistence_entry = None
@@ -125,7 +146,7 @@ class AbstractPersistentAlertIterator(Iterator):
             else:
                 if not isinstance(self._persistence_entry, PersistenceEntry):
                     raise ValueError('load method should return a PersistenceEntry instance')
-                if not self._persistence_entry.organization_id == self.organization_id:
+                if not self._persistence_entry.organization_id == str(self.organization_id):
                     raise ValueError(
                         'PersistenceEntry instance does not match organization ID ' \
                         + self.organization_id)
@@ -134,6 +155,7 @@ class AbstractPersistentAlertIterator(Iterator):
                 if self._persistence_entry.latest_batch_date is None \
                         or self._persistence_entry.latest_batch_date < self._start_date:
                     self._persistence_entry.latest_batch_date = self._start_date
+                    self._persistence_entry.latest_api_cursor = None
                     self._persistence_entry.latest_alert_ids = None
 
         return self._persistence_entry
@@ -157,30 +179,21 @@ class AbstractPersistentAlertIterator(Iterator):
         if self._alerts:
             return
 
-        # get the candidate dates in order, and discard the ones we've already fully processed
-        dates = sorted([x for x in
-                        self.connection.list_organization_alert_dates(
-                            self.persistence_entry.organization_id,
-                            'batchDate')])
-        if self.persistence_entry.latest_batch_date:
-            dates = [x for x in dates if x >= self.persistence_entry.latest_batch_date]
+        if self.persistence_entry.latest_api_cursor:
+            alerts_generator = self._connection.iter_organization_alerts_stream(
+                                    organization_id=self._persistence_entry.organization_id,
+                                    latest_api_cursor=self.persistence_entry.latest_api_cursor)
+        else:
+            latest_batch_date = self.persistence_entry.latest_batch_date
+            alerts_generator = self._connection.iter_organization_alerts_stream(
+                                    organization_id=self._persistence_entry.organization_id,
+                                    latest_alert_id=self._persistence_entry.latest_alert_ids,
+                                    latest_batch_time=latest_batch_date)
 
-        # loop over candidate dates
-        for d in dates:
-            # if candidate date is newer, reset persistence data to it
-            if d != self._persistence_entry.latest_batch_date:
-                self._persistence_entry.latest_batch_date = d
-                self._persistence_entry.latest_alert_ids = None
-
-            # add any alerts on the candidate date we haven't processed yet to the cache
-            for alert in self._connection.iter_organization_alerts(
-                    organization_id=self._persistence_entry.organization_id,
-                    fromDate=d, toDate=d, sortBy='batchDate'):
-                if alert['id'] not in self._persistence_entry.latest_alert_ids:
-                    self._alerts.append(alert)
-
-            # if alert cache is not empty, we are finished for now
-            if self._alerts:
+        for alert in alerts_generator:
+            if not alert['id'] == self._persistence_entry._latest_alert_ids:
+                self._alerts.append(alert)
+            else:
                 return
 
     def save(self):
@@ -190,14 +203,21 @@ class AbstractPersistentAlertIterator(Iterator):
         self._persistence_entry = None
         self._alerts = []
 
-    def next(self):
+    def next(self):        
         if not self._alerts:
             self._load_alerts()
 
         if self._alerts:
             alert = self._alerts.pop()
-            self._persistence_entry.latest_batch_date = alert['batchDate']
-            self._persistence_entry.add_alert_id(alert['id'])
+
+            alert_ts = str(alert['batchDate'] +'T'+ alert['batchTime'])
+            if alert_ts > self._persistence_entry.latest_batch_date:
+                api_cursor = self.connection.get_alert_stream_cursor(version=1, \
+                                                            latest_alert_id=alert['id'], \
+                                                            latest_batch_time=alert_ts)
+                self._persistence_entry.latest_api_cursor = api_cursor
+                self._persistence_entry.latest_batch_date = alert_ts
+                self._persistence_entry.update_alert_id(alert['id'])
             return alert
         else:
             raise StopIteration
@@ -227,16 +247,20 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
         if isfile(self._filename):
             with open(self._filename, 'r') as f:
                 pe = json.load(f)
-                return PersistenceEntry(pe['organization_id'], pe['latest_batch_date'],
-                                        pe['latest_alert_ids'])
+                if pe.has_key('latest_batch_date'):
+                    return PersistenceEntry(pe['organization_id'], pe['latest_batch_date'],
+                                        pe['latest_alert_ids'], None)
+                if pe.has_key('latest_api_cursor'):
+                    return PersistenceEntry(pe['organization_id'], None,
+                                        pe['latest_alert_ids'], pe['latest_api_cursor'])
         else:
             return None
 
     def _save(self):
         pe = {
-            'organization_id': self.persistence_entry.organization_id,
-            'latest_batch_date': self.persistence_entry.latest_batch_date,
-            'latest_alert_ids': [x for x in self.persistence_entry.latest_alert_ids]
+            'organization_id': str(self.persistence_entry.organization_id),
+            'latest_api_cursor': self.persistence_entry.latest_api_cursor,
+            'latest_alert_ids': self.persistence_entry.latest_alert_ids
         }
         with open(self._filename, 'w') as f:
             json.dump(pe, f)
