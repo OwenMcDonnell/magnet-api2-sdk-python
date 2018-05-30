@@ -368,8 +368,9 @@ class Connection(object):
                     alert_ts = alert['batchDate'] +'T'+ alert['batchTime']
                     if alert_ts < latest_batch_time:
                         return
-                    with open('fname.alerts', 'a') as f:
-                        f.write(alert['id'] + ';batchdate: ' + alert['batchDate'] + ';batchtime: ' + alert['batchTime'] + ';cursor:' + params['cursor'] + "\n")
+                    ## Debugging log helper
+                    #with open('fname.alerts', 'a') as f:
+                    #    f.write(alert['id'] + ';batchdate: ' + alert['batchDate'] + ';batchtime: ' + alert['batchTime'] + ';cursor:' + params['cursor'] + "\n")
                     yield alert
             else:
                 response.raise_for_status()
