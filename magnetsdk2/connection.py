@@ -369,8 +369,8 @@ class Connection(object):
                     if alert_ts < latest_batch_time:
                         return
                     ## Debugging log helper
-                    #with open('fname.alerts', 'a') as f:
-                    #    f.write(alert['id'] + ';batchdate: ' + alert['batchDate'] + ';batchtime: ' + alert['batchTime'] + ';cursor:' + params['cursor'] + "\n")
+                    with open('fname.alerts', 'a') as f:
+                        f.write(' '.join([alert['id'], ';batchdate:', alert['batchDate'], ';batchtime:', alert['batchTime'], ';cursor:', params['cursor'], "\n"]))
                     yield alert
             else:
                 response.raise_for_status()
