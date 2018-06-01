@@ -196,6 +196,10 @@ class AbstractPersistentAlertIterator(Iterator):
             else:
                 return
 
+            # if alert cache is not empty, we are finished for now
+            if self._alerts:
+                return
+
     def save(self):
         self._save()
 
@@ -211,13 +215,12 @@ class AbstractPersistentAlertIterator(Iterator):
             alert = self._alerts.pop()
 
             alert_ts = str(alert['batchDate'] +'T'+ alert['batchTime'])
-            if alert_ts > self._persistence_entry.latest_batch_date:
-                api_cursor = self.connection.get_alert_stream_cursor(version=1, \
+            api_cursor = self.connection.get_alert_stream_cursor(version=1, \
                                                             latest_alert_id=alert['id'], \
                                                             latest_batch_time=alert_ts)
-                self._persistence_entry.latest_api_cursor = api_cursor
-                self._persistence_entry.latest_batch_date = alert_ts
-                self._persistence_entry.update_alert_id(alert['id'])
+            self._persistence_entry.latest_api_cursor = api_cursor
+            self._persistence_entry.latest_batch_date = alert_ts
+            self._persistence_entry.update_alert_id(alert['id'])
             return alert
         else:
             raise StopIteration

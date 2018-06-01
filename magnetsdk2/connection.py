@@ -353,24 +353,21 @@ class Connection(object):
             params['cursor'] = self.get_alert_stream_cursor(version=1, \
                                                             latest_alert_id=latest_alert_id, \
                                                             latest_batch_time=latest_batch_time)
-
         while True:
             response = self._request_retry("GET", 
                                         path='organizations/%s/alerts/stream' % organization_id,
                                         params=params)
             if response.status_code == 200:
                 alert_response = response.json()
+
                 if not alert_response['paging']:
                     return
+
                 params['cursor'] = alert_response['paging']['cursor']
+
                 for alert in alert_response['data']:
-                    # If alert returned is older than current latest_batch_date, stop iteration
-                    alert_ts = alert['batchDate'] +'T'+ alert['batchTime']
-                    if alert_ts < latest_batch_time:
-                        return
-                    ## Debugging log helper
-                    with open('fname.alerts', 'a') as f:
-                        f.write(' '.join([alert['id'], ';batchdate:', alert['batchDate'], ';batchtime:', alert['batchTime'], ';cursor:', params['cursor'], "\n"]))
+                    #with open('fname.alerts', 'a') as f:
+                    #        f.write(' '.join([alert['createdAt'], ';alert_id:', alert['id'], ';batchdate:', alert['batchDate'], ';batchtime:', alert['batchTime'], ';cursor:', params['cursor'], "\n"]))
                     yield alert
             else:
                 response.raise_for_status()
