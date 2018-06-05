@@ -26,7 +26,6 @@ _DEFAULT_CONFIG = {'endpoint': 'https://api.niddel.com/v2'}
 _API_KEY_HEADER = 'X-Api-Key'
 _PAGE_SIZE = 100
 
-
 class Connection(object):
     """ This class encapsulates accessing the Niddel Magnet v2 API (https://api.niddel.com/v2)
      using a particular configuration profile from ~/.magnetsdk/config, and is wrapper around
@@ -330,29 +329,26 @@ class Connection(object):
 
         return base64.urlsafe_b64encode(str(b_cursor))
 
-    def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, \
-                                                latest_alert_id=None, latest_batch_time=None):
+    def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, latest_batch_date=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
-        :param api_cursor: string with API cursor representing the latest alert ID retrived
+        :param latest_api_cursor: string with API cursor representing the latest alert ID retrived
+        :param latest_batch_date: string with YYYY-MM-DD format representing the latest alert batch date retrived
         :return: an iterator over the decoded JSON objects that represent alerts.
         """
 
         if not is_valid_uuid(organization_id):
             raise ValueError("organization id should be a string in UUID format")
-
+    
         # loop over alert pages and yield them
         params = {}
 
         if latest_api_cursor:
             params['cursor'] = latest_api_cursor
 
-        elif latest_alert_id and latest_batch_time:
-            if not has_iso8601_timestamp(latest_batch_time):
-                latest_batch_time = parse_timestamp(latest_batch_time)
-            params['cursor'] = self.get_alert_stream_cursor(version=1, \
-                                                            latest_alert_id=latest_alert_id, \
-                                                            latest_batch_time=latest_batch_time)
+        if latest_batch_date:
+            params['batchDate'] = parse_date(latest_batch_date)
+
         while True:
             response = self._request_retry("GET", 
                                         path='organizations/%s/alerts/stream' % organization_id,
@@ -366,8 +362,6 @@ class Connection(object):
                 params['cursor'] = alert_response['paging']['cursor']
 
                 for alert in alert_response['data']:
-                    #with open('fname.alerts', 'a') as f:
-                    #        f.write(' '.join([alert['createdAt'], ';alert_id:', alert['id'], ';batchdate:', alert['batchDate'], ';batchtime:', alert['batchTime'], ';cursor:', params['cursor'], "\n"]))
                     yield alert
             else:
                 response.raise_for_status()

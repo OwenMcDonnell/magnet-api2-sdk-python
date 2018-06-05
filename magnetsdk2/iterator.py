@@ -35,7 +35,7 @@ class PersistenceEntry(object):
         if latest_batch_date is None:
             self._latest_batch_date = None
         else:
-            self._latest_batch_date = parse_timestamp(latest_batch_date)
+            self._latest_batch_date = latest_batch_date
 
     @property
     def latest_api_cursor(self):
@@ -58,26 +58,20 @@ class PersistenceEntry(object):
     @latest_alert_ids.setter
     def latest_alert_ids(self, latest_alert_ids):
         if latest_alert_ids is None:
-            self._latest_alert_ids = None
+            self._latest_alert_ids = []
         else:
-            if isinstance(latest_alert_ids, list):
-                # Get the last element of the list as being the latest persisted alert ID
-                latest_alert_ids = set(latest_alert_ids)
+            if not isinstance(latest_alert_ids, list):
+                latest_alert_ids = [latest_alert_ids]
             if not isinstance(latest_alert_ids, Iterable):
                 raise ValueError('latest alert IDs must be iterable')
-            if latest_alert_ids and not latest_alert_ids:
+            if latest_alert_ids and not all(is_valid_uuid(x) for x in latest_alert_ids):
                 raise ValueError('latest alert IDs must only contain UUIDs')
-            # Handling old format which 'latest_alert_ids' contains multiple entries
-            if isinstance(latest_alert_ids, set):
-                self._latest_alert_ids = next(iter(latest_alert_ids))
-            else:
-                self._latest_alert_ids = latest_alert_ids
+            self._latest_alert_ids = [x for x in latest_alert_ids]
 
-
-    def update_alert_id(self, alert_id):
+    def add_alert_id(self, alert_id):
         if not is_valid_uuid(alert_id):
             raise ValueError("invalid alert ID")
-        self._latest_alert_ids = alert_id
+        self._latest_alert_ids.append(alert_id)
 
     def __init__(self, organization_id, latest_batch_date=None, latest_alert_ids=None, latest_api_cursor=None):
         if not is_valid_uuid(organization_id):
@@ -85,7 +79,7 @@ class PersistenceEntry(object):
         self._organization_id = organization_id
         self._latest_batch_date = None
         self._latest_api_cursor = None
-        self._latest_alert_ids = set()
+        self._latest_alert_ids = []
         self.latest_batch_date = latest_batch_date
         self.latest_api_cursor = latest_api_cursor
         self.latest_alert_ids = latest_alert_ids
@@ -187,14 +181,11 @@ class AbstractPersistentAlertIterator(Iterator):
             latest_batch_date = self.persistence_entry.latest_batch_date
             alerts_generator = self._connection.iter_organization_alerts_stream(
                                     organization_id=self._persistence_entry.organization_id,
-                                    latest_alert_id=self._persistence_entry.latest_alert_ids,
-                                    latest_batch_time=latest_batch_date)
+                                    latest_batch_date=latest_batch_date)
 
         for alert in alerts_generator:
-            if not alert['id'] == self._persistence_entry._latest_alert_ids:
+            if not alert['id'] in self._persistence_entry._latest_alert_ids:
                 self._alerts.append(alert)
-            else:
-                return
 
             # if alert cache is not empty, we are finished for now
             if self._alerts:
@@ -220,7 +211,7 @@ class AbstractPersistentAlertIterator(Iterator):
                                                             latest_batch_time=alert_ts)
             self._persistence_entry.latest_api_cursor = api_cursor
             self._persistence_entry.latest_batch_date = alert_ts
-            self._persistence_entry.update_alert_id(alert['id'])
+            self._persistence_entry.add_alert_id(alert['id'])
             return alert
         else:
             raise StopIteration
@@ -263,7 +254,7 @@ class FilePersistentAlertIterator(AbstractPersistentAlertIterator):
         pe = {
             'organization_id': str(self.persistence_entry.organization_id),
             'latest_api_cursor': self.persistence_entry.latest_api_cursor,
-            'latest_alert_ids': self.persistence_entry.latest_alert_ids
+            'latest_alert_ids': self.persistence_entry.latest_alert_ids[-1]
         }
         with open(self._filename, 'w') as f:
             json.dump(pe, f)
