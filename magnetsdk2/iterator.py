@@ -176,12 +176,14 @@ class AbstractPersistentAlertIterator(Iterator):
         if self.persistence_entry.latest_api_cursor:
             alerts_generator = self._connection.iter_organization_alerts_stream(
                                     organization_id=self._persistence_entry.organization_id,
-                                    latest_api_cursor=self.persistence_entry.latest_api_cursor)
+                                    latest_api_cursor=self.persistence_entry.latest_api_cursor,
+                                    checkpoint=self)
         else:
             latest_batch_date = self.persistence_entry.latest_batch_date
             alerts_generator = self._connection.iter_organization_alerts_stream(
                                     organization_id=self._persistence_entry.organization_id,
-                                    latest_batch_date=latest_batch_date)
+                                    latest_batch_date=latest_batch_date, 
+                                    checkpoint=self)
 
         for alert in alerts_generator:
             if not alert['id'] in self._persistence_entry._latest_alert_ids:
@@ -204,13 +206,8 @@ class AbstractPersistentAlertIterator(Iterator):
 
         if self._alerts:
             alert = self._alerts.pop()
-
-            alert_ts = str(alert['batchDate'] +'T'+ alert['batchTime'])
-            api_cursor = self.connection.get_alert_stream_cursor(version=1, \
-                                                            latest_alert_id=alert['id'], \
-                                                            latest_batch_time=alert_ts)
-            self._persistence_entry.latest_api_cursor = api_cursor
-            self._persistence_entry.latest_batch_date = alert_ts
+            ## latest_api_cursor is updated within 'self._connection.iter_organization_alerts_stream'
+            self._persistence_entry.latest_batch_date = str(alert['batchDate'] +'T'+ alert['batchTime'])
             self._persistence_entry.add_alert_id(alert['id'])
             return alert
         else:

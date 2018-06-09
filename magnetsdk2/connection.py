@@ -6,7 +6,6 @@ Niddel Magnet v2 API.
 import logging
 import os
 import sys
-import base64
 
 import six
 from uuid import UUID
@@ -16,8 +15,7 @@ from six.moves.urllib.parse import urlsplit, quote_plus
 
 from magnetsdk2.time import UTC
 from magnetsdk2.validation import is_valid_uuid, is_valid_uri, is_valid_port, \
-     is_valid_alert_sortBy, is_valid_alert_status, parse_date, to_bytes, parse_timestamp, \
-     has_iso8601_timestamp, to_SecondOfDay
+     is_valid_alert_sortBy, is_valid_alert_status, parse_date
 
 # Default values used for the configuration
 _CONFIG_DIR = os.path.expanduser('~/.magnetsdk')
@@ -314,22 +312,9 @@ class Connection(object):
                 response.raise_for_status()
             params['page'] += 1
 
-    def get_alert_stream_cursor(self, version=1, latest_alert_id=None, latest_batch_time=None):
-        """ Function the calculate the API stream cursor based on the version, last seen
-        alert ID and batch time."""
-        b_cursor = bytearray()
-        # append 1 byte for 'version'
-        b_cursor.extend(to_bytes(n=version, length=1))
-        # append 16 bytes for 'alert_id'
-        if not isinstance(latest_alert_id, UUID):
-            alert_id = UUID(latest_alert_id)
-        b_cursor.extend(alert_id.bytes)
-        # append 4 bytes for the 'latest_batch_time' seconds
-        b_cursor.extend(to_bytes(n=to_SecondOfDay(latest_batch_time), length=4))
 
-        return base64.urlsafe_b64encode(str(b_cursor))
-
-    def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, latest_batch_date=None):
+    def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, 
+                                        latest_batch_date=None, checkpoint=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param latest_api_cursor: string with API cursor representing the latest alert ID retrived
@@ -346,7 +331,7 @@ class Connection(object):
         if latest_api_cursor:
             params['cursor'] = latest_api_cursor
 
-        if latest_batch_date:
+        elif latest_batch_date:
             params['batchDate'] = parse_date(latest_batch_date)
 
         while True:
@@ -356,15 +341,24 @@ class Connection(object):
             if response.status_code == 200:
                 alert_response = response.json()
 
-                if not alert_response['paging']:
+                if not alert_response.has_key('paging'):
                     return
 
+                if not alert_response['paging'].has_key('cursor'):
+                    return
+                
                 params['cursor'] = alert_response['paging']['cursor']
 
+                if params.has_key('batchDate'):
+                    del params['batchDate']
+
                 for alert in alert_response['data']:
+                    if checkpoint:
+                        checkpoint._persistence_entry.latest_api_cursor = params['cursor']
                     yield alert
             else:
                 response.raise_for_status()
+
 
     def list_organization_alert_dates(self, organization_id, sortBy="logDate"):
         """ Lists all log or batch dates for which alerts exist on the organization.
