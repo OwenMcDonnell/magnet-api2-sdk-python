@@ -338,6 +338,7 @@ class Connection(object):
             response = self._request_retry("GET", 
                                         path='organizations/%s/alerts/stream' % organization_id,
                                         params=params)
+            
             if response.status_code == 200:
                 alert_response = response.json()
 
