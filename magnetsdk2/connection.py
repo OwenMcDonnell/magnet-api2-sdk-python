@@ -314,7 +314,7 @@ class Connection(object):
 
 
     def iter_organization_alerts_stream(self, organization_id, latest_api_cursor=None, 
-                                        latest_batch_date=None, checkpoint=None):
+                                        latest_batch_date=None, persistence=None):
         """ Generator that allows iteration over an organization's alerts, with optional filters.
         :param organization_id: string with the UUID-style unique ID of the organization
         :param latest_api_cursor: string with API cursor representing the latest alert ID retrived
@@ -353,10 +353,12 @@ class Connection(object):
                 if params.has_key('batchDate'):
                     del params['batchDate']
 
-                for alert in alert_response['data']:
-                    if checkpoint:
-                        checkpoint._persistence_entry.latest_api_cursor = params['cursor']
-                    yield alert
+                for index, alert in enumerate(alert_response['data']):
+                    if persistence:
+                        yield {'cursor': params['cursor'], 'index':index, 'batch_size':len(alert_response['data']), 'alert':alert}
+                    else:
+                        yield alert
+                return
             else:
                 response.raise_for_status()
 

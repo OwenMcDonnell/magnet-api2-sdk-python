@@ -176,22 +176,22 @@ class AbstractPersistentAlertIterator(Iterator):
         if self.persistence_entry.latest_api_cursor:
             alerts_generator = self._connection.iter_organization_alerts_stream(
                                     organization_id=self._persistence_entry.organization_id,
-                                    latest_api_cursor=self.persistence_entry.latest_api_cursor,
-                                    checkpoint=self)
+                                    latest_api_cursor=self._persistence_entry.latest_api_cursor,
+                                    persistence=True)
         else:
             latest_batch_date = self.persistence_entry.latest_batch_date
             alerts_generator = self._connection.iter_organization_alerts_stream(
                                     organization_id=self._persistence_entry.organization_id,
-                                    latest_batch_date=latest_batch_date, 
-                                    checkpoint=self)
+                                    latest_batch_date=latest_batch_date,
+                                    persistence=True)
 
         for alert in alerts_generator:
-            if not alert['id'] in self._persistence_entry._latest_alert_ids:
+            if not alert['alert']['id'] in self._persistence_entry._latest_alert_ids:
                 self._alerts.append(alert)
 
-            # if alert cache is not empty, we are finished for now
-            if self._alerts:
-                return
+        # if alert cache is not empty, we are finished for now
+        if self._alerts:
+            return
 
     def save(self):
         self._save()
@@ -200,16 +200,16 @@ class AbstractPersistentAlertIterator(Iterator):
         self._persistence_entry = None
         self._alerts = []
 
-    def next(self):        
+    def next(self):
         if not self._alerts:
             self._load_alerts()
 
         if self._alerts:
             alert = self._alerts.pop()
-            ## latest_api_cursor is updated within 'self._connection.iter_organization_alerts_stream'
-            self._persistence_entry.latest_batch_date = str(alert['batchDate'] +'T'+ alert['batchTime'])
-            self._persistence_entry.add_alert_id(alert['id'])
-            return alert
+            self._persistence_entry.latest_api_cursor = alert['cursor']
+            self._persistence_entry.latest_batch_date = str(alert['alert']['batchDate'] +'T'+ alert['alert']['batchTime'])
+            self._persistence_entry.add_alert_id(alert['alert']['id'])
+            return alert['alert']
         else:
             raise StopIteration
 
