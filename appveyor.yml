@@ -34,7 +34,7 @@ before_build:
 install:
     - cmd: python -m pip install wheel setuptools
 
-    - sh: sudo python -m pip install wheel setuptools
+    - sh: sudo -H python -m pip install wheel setuptools
 
 build: off
 
