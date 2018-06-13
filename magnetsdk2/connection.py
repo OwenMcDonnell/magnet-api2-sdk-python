@@ -353,9 +353,9 @@ class Connection(object):
                 if params.has_key('batchDate'):
                     del params['batchDate']
 
-                for index, alert in enumerate(alert_response['data']):
+                for alert in alert_response['data']:
                     if persistence:
-                        yield {'cursor': params['cursor'], 'index':index, 'batch_size':len(alert_response['data']), 'alert':alert}
+                        yield {'cursor': params['cursor'], 'alert':alert}
                     else:
                         yield alert
                 return
