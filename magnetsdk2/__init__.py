@@ -5,7 +5,7 @@ A simple client that allows idiomatic access to the Niddel Magnet v2 REST API
 package to perform the requests.
 """
 
-__version__ = '1.5.5'
+__version__ = '1.6.0'
 
 # set up package logger
 import logging
