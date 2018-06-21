@@ -27,14 +27,14 @@ environment:
 before_build:
     - cmd: set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
 
-    - sh: sudo apt update
-    - sh: sudo apt -y install $PYTHON $PYTHON_PIP
-    - sh: sudo ln -s `which $PYTHON` /usr/bin/python
+    - sh: apt update
+    - sh: apt -y install $PYTHON $PYTHON_PIP
+    - sh: ln -s `which $PYTHON` /usr/bin/python
 
 install:
     - cmd: python -m pip install wheel setuptools
 
-    - sh: sudo python -m pip install wheel setuptools
+    - sh: python -m pip install wheel setuptools
 
 build: off
 
