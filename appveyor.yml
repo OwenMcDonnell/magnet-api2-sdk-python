@@ -33,9 +33,8 @@ before_build:
 
 install:
     - cmd: python -m pip install wheel setuptools
-    - sh: sudo python -m pip install wheel
-    - sh: sudo python -m pip show setuptools
-    - sh: sudo python -m pip install setuptools
+    - sh: sudo python -m pip install urllib3
+    - sh: sudo python -m pip install wheel setuptools
 
 build: off
 
